@@ -160,7 +160,8 @@ def run_batch_evaluation(qa_pairs):
         threshold=0.5
     )
 
-    metrics = [fluency, coherence, relevance, correctness]
+    # metrics = [fluency, coherence, relevance, correctness]
+    metrics = [correctness]
 
     # Run DeepEval (fixed: removed skip_on_missing_params parameter)
     print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")

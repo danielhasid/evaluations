@@ -1,15 +1,15 @@
 [
   {
     "question": "What is Python?",
-    "generated_answer": "Python is a high-level, interpreted programming language known for its readability and simplicity. It supports multiple programming paradigms, such as procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.",
+    "generated_answer": "Python is a high-level, interpreted programming language known for its clear syntax and readability. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.",
     "expected_answer": "Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms including procedural, object-oriented, and functional programming.",
     "metadata": "basic_knowledge",
-    "timestamp": "2026-02-24T21:18:43.912171",
+    "timestamp": "2026-02-24T21:46:07.970932",
     "evaluation_metrics": {
-      "ContextualRecallMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match. Great job!",
-        "threshold": 0.7,
+      "Correctness": {
+        "score": 0.9804215434031507,
+        "reason": "The actual output accurately describes Python as a high-level, interpreted language known for simplicity and readability, and mentions its support for multiple programming paradigms including procedural, object-oriented, and functional programming. No factual contradictions or omissions are present.",
+        "threshold": 0.5,
         "passed": true
       }
     },
@@ -17,15 +17,15 @@
   },
   {
     "question": "How does async/await work in Python?",
-    "generated_answer": "Async/await in Python is used for asynchronous programming, allowing for the execution of multiple tasks concurrently, without the need for multi-threading or multi-processing. \"Async\" is used to declare a function as a coroutine, which can be paused and resumed, enabling other tasks to run during the pause. \"Await\" is used inside these coroutines to call other coroutines, effectively pausing the current coroutine until the awaited one finishes. This allows Python to handle other tasks in the meantime, increasing efficiency in programs that involve IO-bound tasks, like making requests to a server or reading from a file.",
+    "generated_answer": "Async/await in Python is a method used for handling asynchronous programming, which allows for performing multiple operations at once without waiting for each operation to complete. 'Async' is a keyword for defining a function as a coroutine, which is a special function that can have its execution paused and resumed. 'Await' is used to call these coroutines and pause the execution of the function until the awaited coroutine is complete.\n\nThis allows Python to handle other tasks in the meantime, which can significantly improve efficiency in programs that involve I/O-bound tasks (like network requests or file reading/writing), where waiting for completion of each task would otherwise cause a lot of idle time. This does not, however, speed up CPU-bound tasks, as Python's Global Interpreter Lock (GIL) allows only one thread to execute Python bytecodes at a time.",
     "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
     "metadata": "advanced_concepts",
-    "timestamp": "2026-02-24T21:18:43.912171",
+    "timestamp": "2026-02-24T21:46:07.970932",
     "evaluation_metrics": {
-      "ContextualRecallMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match. Great job!",
-        "threshold": 0.7,
+      "Correctness": {
+        "score": 0.8460924818997044,
+        "reason": "The response correctly explains that async/await is a pattern for asynchronous code in Python, describes the use of 'async' to define coroutine functions, and states that 'await' pauses execution until the coroutine completes. However, it omits the detail that 'await' allows other tasks to run concurrently, which is a key aspect of async/await's utility.",
+        "threshold": 0.5,
         "passed": true
       }
     },
@@ -33,15 +33,15 @@
   },
   {
     "question": "What is the difference between a list and a tuple?",
-    "generated_answer": "A list is mutable, meaning you can change its content by adding, removing, or changing elements. A tuple, on the other hand, is immutable, meaning that once it's defined, you can't change its content. This immutability makes tuples slightly more efficient in terms of memory and performance than lists.",
+    "generated_answer": "A list is a mutable data type in Python, meaning it can be changed after it is created. It is defined by values separated by commas and enclosed within square brackets. A tuple, on the other hand, is an immutable data type, meaning it cannot be changed after it is created. It is defined by values separated by commas and enclosed within parentheses.",
     "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
     "metadata": "data_structures",
-    "timestamp": "2026-02-24T21:18:43.912171",
+    "timestamp": "2026-02-24T21:46:07.970932",
     "evaluation_metrics": {
-      "ContextualRecallMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match.",
-        "threshold": 0.7,
+      "Correctness": {
+        "score": 0.9865224072151173,
+        "reason": "The response accurately explains that lists are mutable and tuples are immutable, and correctly states the syntax differences (lists use square brackets, tuples use parentheses). No factual errors or omissions are present.",
+        "threshold": 0.5,
         "passed": true
       }
     },

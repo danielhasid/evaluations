@@ -451,7 +451,7 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
     <aside class="w-64 border-r border-gray-800 flex flex-col bg-[#0b0c10] overflow-y-auto shrink-0">
         <div class="p-5 flex items-center gap-3 border-b border-gray-800">
             <div class="w-7 h-7 bg-white rounded flex items-center justify-center text-black font-extrabold text-sm">C</div>
-            <span class="font-bold text-white tracking-wide text-lg">Confident AI</span>
+            <span class="font-bold text-white tracking-wide text-lg">Evaluation Tests</span>
         </div>
 
         <div class="p-3">
@@ -475,7 +475,7 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                     </div>
                     <div class="text-2xl font-bold mt-1 text-white">Healthy</div>
                 </div>
-                <div class="text-right text-xs text-gray-500 leading-relaxed">based on {total_cases} evaluations<br>from your dataset</div>
+                <div class="text-right text-xs text-gray-500 leading-relaxed">based on {total_cases} evaluations</div>
             </div>
             <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                 <span class="text-gray-400 text-sm font-medium">Avg Model Score</span>

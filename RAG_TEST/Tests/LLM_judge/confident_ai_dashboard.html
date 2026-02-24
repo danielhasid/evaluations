@@ -20,7 +20,7 @@
     <aside class="w-64 border-r border-gray-800 flex flex-col bg-[#0b0c10] overflow-y-auto shrink-0">
         <div class="p-5 flex items-center gap-3 border-b border-gray-800">
             <div class="w-7 h-7 bg-white rounded flex items-center justify-center text-black font-extrabold text-sm">C</div>
-            <span class="font-bold text-white tracking-wide text-lg">Confident AI</span>
+            <span class="font-bold text-white tracking-wide text-lg">Evaluation Tests</span>
         </div>
 
         <div class="p-3">
@@ -44,13 +44,13 @@
                     </div>
                     <div class="text-2xl font-bold mt-1 text-white">Healthy</div>
                 </div>
-                <div class="text-right text-xs text-gray-500 leading-relaxed">based on 3 evaluations<br>from your dataset</div>
+                <div class="text-right text-xs text-gray-500 leading-relaxed">based on 3 evaluations</div>
             </div>
             <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                 <span class="text-gray-400 text-sm font-medium">Avg Model Score</span>
                 <div class="text-2xl font-bold mt-1 text-emerald-400 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-                    0.99
+                    0.94
                 </div>
             </div>
         </div>
@@ -92,7 +92,7 @@
                         <tbody>
                             
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | NO METRICS: N/A (0.000)" data-target="details_0">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.980)" data-target="details_0">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -100,7 +100,7 @@
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language. It is known for its cl...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language known for its clear syn...</td>
         </tr>
 
         <tr id="details_0" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -121,7 +121,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T16:56:55.800660</div>
+                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
                         </div>
                     </div>
 
@@ -132,7 +132,7 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language. It is known for its clear syntax, code readability, and emphasis on whitespace. Python supports multiple programming paradigms, including procedural, object-oriented, and functional programming. It is widely used for various kinds of software development and other fields such as data analysis, machine learning, and artificial intelligence.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language known for its clear syntax and readability. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.</div>
                     </div>
 
                     <div>
@@ -146,62 +146,14 @@
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">AnswerRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
+                    <div class="text-gray-300 text-xs">0.980</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
+                    <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because the response perfectly addressed the question &#x27;What is Python?&#x27; without any irrelevant information. Great job on staying focused and providing a clear, concise answer!</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because all relevant nodes are perfectly ranked above the irrelevant node. The first node highlights &#x27;Python is a high-level programming language,&#x27; directly aligning with the input&#x27;s focus. The second node mentions &#x27;Python supports multiple programming paradigms,&#x27; matching the input&#x27;s description. The third node emphasizes &#x27;Python is known for its simple and readable syntax,&#x27; consistent with the input&#x27;s emphasis. The fourth node, while informative about Python&#x27;s applications, does not directly address the input&#x27;s focus on Python&#x27;s characteristics, justifying its lower rank. Great job on the perfect ranking!</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRecallMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because every sentence in the expected output perfectly aligns with the nodes in the retrieval context, showcasing a complete and accurate match.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because the retrieval context perfectly aligns with the input, providing clear and relevant information about Python, such as its creation by Guido van Rossum, its support for multiple paradigms, and its widespread use in various fields.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">FaithfulnessMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Great job!</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The actual output accurately describes Python as a high-level, interpreted language known for simplicity and readability, and mentions its support for multiple programming paradigms including procedural, object-oriented, and functional programming. No factual contradictions or omissions are present.</div>
             </div>
             
                         </div>
@@ -211,7 +163,7 @@
         </tr>
         
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: AnswerRelevancyMetric (0.833)" data-target="details_1">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.846)" data-target="details_1">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -219,7 +171,7 @@
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">How does async/await work in Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a way to write concurrent code using the `asyncio` libr...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a method used for handling asynchronous programming, wh...</td>
         </tr>
 
         <tr id="details_1" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -240,7 +192,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T16:56:55.800660</div>
+                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
                         </div>
                     </div>
 
@@ -251,7 +203,9 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a way to write concurrent code using the `asyncio` library. `async` is used to define a function as a coroutine, which is a special type of function that can be paused and resumed, allowing other code to run during the wait times. `await` is used within these coroutines to call other coroutines and wait for them to finish. This allows Python to handle other tasks in the meantime, such as managing IO operations or user input, which leads to more efficient use of resources in programs with a lot of waiting, like web servers or user interfaces.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a method used for handling asynchronous programming, which allows for performing multiple operations at once without waiting for each operation to complete. &#x27;Async&#x27; is a keyword for defining a function as a coroutine, which is a special function that can have its execution paused and resumed. &#x27;Await&#x27; is used to call these coroutines and pause the execution of the function until the awaited coroutine is complete.
+
+This allows Python to handle other tasks in the meantime, which can significantly improve efficiency in programs that involve I/O-bound tasks (like network requests or file reading/writing), where waiting for completion of each task would otherwise cause a lot of idle time. This does not, however, speed up CPU-bound tasks, as Python&#x27;s Global Interpreter Lock (GIL) allows only one thread to execute Python bytecodes at a time.</div>
                     </div>
 
                     <div>
@@ -265,62 +219,14 @@
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">AnswerRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">0.833</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
+                    <div class="text-gray-300 text-xs">0.846</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
+                    <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 0.83 because the answer provides a good overview of async/await in Python, but includes some statements that focus on tasks Python can handle and examples of where async/await is beneficial, rather than directly explaining how async/await works.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because all relevant nodes are perfectly ranked above the irrelevant node. The first four nodes in the retrieval contexts provide direct and comprehensive explanations about async/await in Python, such as &#x27;Async/await in Python allows for asynchronous programming using coroutines.&#x27; and &#x27;The await keyword pauses execution until the awaited coroutine completes.&#x27; These nodes effectively address the input question. The fifth node, although related, is less directly relevant as it discusses &#x27;Python&#x27;s asyncio library provides the event loop for async operations,&#x27; which does not directly explain how async/await works. This perfect ranking ensures a top score, reflecting an excellent retrieval performance.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRecallMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because the retrieval context perfectly aligns with the input, providing clear and relevant information about how async/await works in Python. Great job!</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">FaithfulnessMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Great job!</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response correctly explains that async/await is a pattern for asynchronous code in Python, describes the use of &#x27;async&#x27; to define coroutine functions, and states that &#x27;await&#x27; pauses execution until the coroutine completes. However, it omits the detail that &#x27;await&#x27; allows other tasks to run concurrently, which is a key aspect of async/await&#x27;s utility.</div>
             </div>
             
                         </div>
@@ -330,7 +236,7 @@
         </tr>
         
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | NO METRICS: N/A (0.000)" data-target="details_2">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.987)" data-target="details_2">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -338,7 +244,7 @@
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is the difference between a list and a tuple?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list is mutable, meaning you can modify its content. A tuple, on the other han...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list is a mutable data type in Python, meaning it can be changed after it is c...</td>
         </tr>
 
         <tr id="details_2" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -359,7 +265,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T16:56:55.800660</div>
+                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
                         </div>
                     </div>
 
@@ -370,7 +276,7 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">A list is mutable, meaning you can modify its content. A tuple, on the other hand, is immutable meaning you cannot change its content once it&#x27;s defined. This is the main difference, but there are also other differences such as lists having more built-in functions than tuples.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">A list is a mutable data type in Python, meaning it can be changed after it is created. It is defined by values separated by commas and enclosed within square brackets. A tuple, on the other hand, is an immutable data type, meaning it cannot be changed after it is created. It is defined by values separated by commas and enclosed within parentheses.</div>
                     </div>
 
                     <div>
@@ -384,62 +290,14 @@
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">AnswerRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
+                    <div class="text-gray-300 text-xs">0.987</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
+                    <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because the response perfectly addressed the question about the difference between a list and a tuple without any irrelevant information. Great job on staying focused and providing a clear, concise answer!</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because all relevant nodes are ranked higher than irrelevant nodes. The first node provides essential information about lists being mutable, while the second node highlights the immutability of tuples, both directly addressing the input query. The third and fourth nodes offer syntax details for lists and tuples, respectively, which are also crucial to the expected output. The fifth and sixth nodes, although informative, focus on aspects like methods and memory efficiency, which are not central to the query&#x27;s focus on mutability and syntax, justifying their lower ranking.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRecallMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because every sentence in the expected output perfectly aligns with the nodes in the retrieval context, showcasing a flawless match. Great job!</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualRelevancyMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because the retrieval context perfectly addresses the input by providing clear distinctions between lists and tuples, such as their mutability, syntax, and memory efficiency.</div>
-            </div>
-            
-            <div class="border border-gray-800/50 rounded-md p-3">
-                <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">FaithfulnessMetric</div>
-                    <div class="text-gray-300 text-xs">1.000</div>
-                </div>
-                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: true</div>
-                </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Keep up the great work!</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response accurately explains that lists are mutable and tuples are immutable, and correctly states the syntax differences (lists use square brackets, tuples use parentheses). No factual errors or omissions are present.</div>
             </div>
             
                         </div>
@@ -470,32 +328,8 @@
                 
         <div class="bg-[#1e1a2e] border border-[#3d2f6a]/40 rounded-md p-3 text-center">
             <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#a855f7"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">AnswerRelevancy</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Correctness</div>
             <div class="text-lg font-bold text-white mt-1">0.94</div>
-        </div>
-        
-        <div class="bg-[#1e1e14] border border-[#6a5e1a]/40 rounded-md p-3 text-center">
-            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#fde047"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">ContextualPrecision</div>
-            <div class="text-lg font-bold text-white mt-1">1.00</div>
-        </div>
-        
-        <div class="bg-[#141a2e] border border-[#1e3a6a]/40 rounded-md p-3 text-center">
-            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#3b82f6"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">ContextualRecall</div>
-            <div class="text-lg font-bold text-white mt-1">1.00</div>
-        </div>
-        
-        <div class="bg-[#141e1a] border border-[#1a4a2e]/40 rounded-md p-3 text-center">
-            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#10b981"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">ContextualRelevancy</div>
-            <div class="text-lg font-bold text-white mt-1">1.00</div>
-        </div>
-        
-        <div class="bg-[#2e1a14] border border-[#6a2e1a]/40 rounded-md p-3 text-center">
-            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#f97316"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Faithfulness</div>
-            <div class="text-lg font-bold text-white mt-1">1.00</div>
         </div>
         
             </div>
@@ -532,8 +366,8 @@
                 labels: ["What is Python?", "How does async/...", "What is the dif..."],
                 datasets: [
                     {
-                label: "AnswerRelevancyMetric",
-                data: [1.0, 0.8333333333333334, 1.0],
+                label: "Correctness",
+                data: [0.9804215434031507, 0.8460924818997044, 0.9865224072151173],
                 backgroundColor: "#a855f733",
                 borderColor: "#a855f7",
                 borderWidth: 2.5,
@@ -542,58 +376,6 @@
                 pointRadius: 5,
                 pointHoverRadius: 8,
                 pointStyle: "circle",
-                fill: false
-            },
-{
-                label: "ContextualPrecisionMetric",
-                data: [1.0, 1.0, 1.0],
-                backgroundColor: "#fde04733",
-                borderColor: "#fde047",
-                borderWidth: 2.5,
-                borderDash: [6,3],
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                pointStyle: "rect",
-                fill: false
-            },
-{
-                label: "ContextualRecallMetric",
-                data: [1.0, 1.0, 1.0],
-                backgroundColor: "#3b82f633",
-                borderColor: "#3b82f6",
-                borderWidth: 2.5,
-                borderDash: [2,3],
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                pointStyle: "triangle",
-                fill: false
-            },
-{
-                label: "ContextualRelevancyMetric",
-                data: [1.0, 1.0, 1.0],
-                backgroundColor: "#10b98133",
-                borderColor: "#10b981",
-                borderWidth: 2.5,
-                borderDash: [8,3,2,3],
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                pointStyle: "rectRot",
-                fill: false
-            },
-{
-                label: "FaithfulnessMetric",
-                data: [1.0, 1.0, 1.0],
-                backgroundColor: "#f9731633",
-                borderColor: "#f97316",
-                borderWidth: 2.5,
-                borderDash: [12,3],
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                pointStyle: "star",
                 fill: false
             }
                 ]
