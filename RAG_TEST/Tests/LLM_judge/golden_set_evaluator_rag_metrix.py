@@ -114,9 +114,29 @@ def generate_answers_for_dataset(qa_pairs):
 def run_batch_evaluation(qa_pairs):
     """
     Evaluate all Q&A pairs using DeepEval RAG metrics.
-    Creates test cases and runs RAG-specific metrics: AnswerRelevancy, Faithfulness, 
+    Creates test cases and runs RAG-specific metrics: AnswerRelevancy, Faithfulness,
     ContextualPrecision, ContextualRecall, and ContextualRelevancy.
     Returns both test_cases and metrics for accessing scores.
+
+    Common combinations:
+        If you only care about the LLM's response quality:
+            metrics = [answer_relevancy, faithfulness]
+            # Needs: input, actual_output, retrieval_context
+
+        If you only care about your retriever/RAG pipeline quality:
+            metrics = [contextual_precision, contextual_recall, contextual_relevancy]
+            # Needs: input, expected_output, retrieval_context
+
+        If you want end-to-end RAG evaluation:
+            metrics = [answer_relevancy, faithfulness, contextual_precision, contextual_recall, contextual_relevancy]
+            # Needs: input, actual_output, expected_output, retrieval_context
+
+    General guidance:
+        - Minimal viable QA eval      → answer_relevancy + faithfulness (most common starting point)
+        - Focus on retrieval          → contextual_relevancy + contextual_recall
+        - Have ground truth?          → add contextual_precision + contextual_recall
+        - No ground truth?            → skip contextual_precision and contextual_recall
+                                        since both require expected_output
     """
     test_cases = []
 
@@ -134,22 +154,26 @@ def run_batch_evaluation(qa_pairs):
     # Note: Using gpt-4o instead of gpt-4 because RAG metrics require structured outputs
     answer_relevancy = AnswerRelevancyMetric(
         threshold=0.7,
-        model="gpt-4o"
+        model="gpt-4o",
+        include_reason=True
     )
 
     faithfulness = FaithfulnessMetric(
         threshold=0.7,
-        model="gpt-4o"
+        model="gpt-4o",
+        include_reason=True
     )
 
     contextual_precision = ContextualPrecisionMetric(
         threshold=0.7,
-        model="gpt-4o"
+        model="gpt-4o",
+        include_reason=True
     )
 
     contextual_recall = ContextualRecallMetric(
         threshold=0.7,
-        model="gpt-4o"
+        model="gpt-4o",
+        include_reason=True
     )
 
     contextual_relevancy = ContextualRelevancyMetric(

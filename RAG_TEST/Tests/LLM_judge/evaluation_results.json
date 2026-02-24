@@ -1,38 +1,14 @@
 [
   {
     "question": "What is Python?",
-    "generated_answer": "Python is a high-level, interpreted programming language. It is known for its clear syntax, code readability, and emphasis on whitespace. Python supports multiple programming paradigms, including procedural, object-oriented, and functional programming. It is widely used for various kinds of software development and other fields such as data analysis, machine learning, and artificial intelligence.",
+    "generated_answer": "Python is a high-level, interpreted programming language known for its readability and simplicity. It supports multiple programming paradigms, such as procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.",
     "expected_answer": "Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms including procedural, object-oriented, and functional programming.",
     "metadata": "basic_knowledge",
-    "timestamp": "2026-02-24T16:56:55.800660",
+    "timestamp": "2026-02-24T21:18:43.912171",
     "evaluation_metrics": {
-      "AnswerRelevancyMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because the response perfectly addressed the question 'What is Python?' without any irrelevant information. Great job on staying focused and providing a clear, concise answer!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "FaithfulnessMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Great job!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualPrecisionMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because all relevant nodes are perfectly ranked above the irrelevant node. The first node highlights 'Python is a high-level programming language,' directly aligning with the input's focus. The second node mentions 'Python supports multiple programming paradigms,' matching the input's description. The third node emphasizes 'Python is known for its simple and readable syntax,' consistent with the input's emphasis. The fourth node, while informative about Python's applications, does not directly address the input's focus on Python's characteristics, justifying its lower rank. Great job on the perfect ranking!",
-        "threshold": 0.7,
-        "passed": true
-      },
       "ContextualRecallMetric": {
         "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output perfectly aligns with the nodes in the retrieval context, showcasing a complete and accurate match.",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualRelevancyMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because the retrieval context perfectly aligns with the input, providing clear and relevant information about Python, such as its creation by Guido van Rossum, its support for multiple paradigms, and its widespread use in various fields.",
+        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match. Great job!",
         "threshold": 0.7,
         "passed": true
       }
@@ -41,38 +17,14 @@
   },
   {
     "question": "How does async/await work in Python?",
-    "generated_answer": "Async/await in Python is a way to write concurrent code using the `asyncio` library. `async` is used to define a function as a coroutine, which is a special type of function that can be paused and resumed, allowing other code to run during the wait times. `await` is used within these coroutines to call other coroutines and wait for them to finish. This allows Python to handle other tasks in the meantime, such as managing IO operations or user input, which leads to more efficient use of resources in programs with a lot of waiting, like web servers or user interfaces.",
+    "generated_answer": "Async/await in Python is used for asynchronous programming, allowing for the execution of multiple tasks concurrently, without the need for multi-threading or multi-processing. \"Async\" is used to declare a function as a coroutine, which can be paused and resumed, enabling other tasks to run during the pause. \"Await\" is used inside these coroutines to call other coroutines, effectively pausing the current coroutine until the awaited one finishes. This allows Python to handle other tasks in the meantime, increasing efficiency in programs that involve IO-bound tasks, like making requests to a server or reading from a file.",
     "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
     "metadata": "advanced_concepts",
-    "timestamp": "2026-02-24T16:56:55.800660",
+    "timestamp": "2026-02-24T21:18:43.912171",
     "evaluation_metrics": {
-      "AnswerRelevancyMetric": {
-        "score": 0.8333333333333334,
-        "reason": "The score is 0.83 because the answer provides a good overview of async/await in Python, but includes some statements that focus on tasks Python can handle and examples of where async/await is beneficial, rather than directly explaining how async/await works.",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "FaithfulnessMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Great job!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualPrecisionMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because all relevant nodes are perfectly ranked above the irrelevant node. The first four nodes in the retrieval contexts provide direct and comprehensive explanations about async/await in Python, such as 'Async/await in Python allows for asynchronous programming using coroutines.' and 'The await keyword pauses execution until the awaited coroutine completes.' These nodes effectively address the input question. The fifth node, although related, is less directly relevant as it discusses 'Python's asyncio library provides the event loop for async operations,' which does not directly explain how async/await works. This perfect ranking ensures a top score, reflecting an excellent retrieval performance.",
-        "threshold": 0.7,
-        "passed": true
-      },
       "ContextualRecallMetric": {
         "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match.",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualRelevancyMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because the retrieval context perfectly aligns with the input, providing clear and relevant information about how async/await works in Python. Great job!",
+        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match. Great job!",
         "threshold": 0.7,
         "passed": true
       }
@@ -81,38 +33,14 @@
   },
   {
     "question": "What is the difference between a list and a tuple?",
-    "generated_answer": "A list is mutable, meaning you can modify its content. A tuple, on the other hand, is immutable meaning you cannot change its content once it's defined. This is the main difference, but there are also other differences such as lists having more built-in functions than tuples.",
+    "generated_answer": "A list is mutable, meaning you can change its content by adding, removing, or changing elements. A tuple, on the other hand, is immutable, meaning that once it's defined, you can't change its content. This immutability makes tuples slightly more efficient in terms of memory and performance than lists.",
     "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
     "metadata": "data_structures",
-    "timestamp": "2026-02-24T16:56:55.800660",
+    "timestamp": "2026-02-24T21:18:43.912171",
     "evaluation_metrics": {
-      "AnswerRelevancyMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because the response perfectly addressed the question about the difference between a list and a tuple without any irrelevant information. Great job on staying focused and providing a clear, concise answer!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "FaithfulnessMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context. Everything aligns perfectly, showcasing a high level of accuracy and consistency. Keep up the great work!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualPrecisionMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because all relevant nodes are ranked higher than irrelevant nodes. The first node provides essential information about lists being mutable, while the second node highlights the immutability of tuples, both directly addressing the input query. The third and fourth nodes offer syntax details for lists and tuples, respectively, which are also crucial to the expected output. The fifth and sixth nodes, although informative, focus on aspects like methods and memory efficiency, which are not central to the query's focus on mutability and syntax, justifying their lower ranking.",
-        "threshold": 0.7,
-        "passed": true
-      },
       "ContextualRecallMetric": {
         "score": 1.0,
-        "reason": "The score is 1.00 because every sentence in the expected output perfectly aligns with the nodes in the retrieval context, showcasing a flawless match. Great job!",
-        "threshold": 0.7,
-        "passed": true
-      },
-      "ContextualRelevancyMetric": {
-        "score": 1.0,
-        "reason": "The score is 1.00 because the retrieval context perfectly addresses the input by providing clear distinctions between lists and tuples, such as their mutability, syntax, and memory efficiency.",
+        "reason": "The score is 1.00 because every sentence in the expected output is perfectly aligned with the nodes in the retrieval context, showcasing a flawless match.",
         "threshold": 0.7,
         "passed": true
       }
