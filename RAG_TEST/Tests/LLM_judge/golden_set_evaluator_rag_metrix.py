@@ -4,9 +4,14 @@ import json
 from datetime import datetime
 import openai
 from deepeval import evaluate
-from deepeval.metrics.g_eval import Rubric
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
-from deepeval.metrics import GEval
+from deepeval.metrics import (
+    AnswerRelevancyMetric,
+    FaithfulnessMetric,
+    ContextualPrecisionMetric,
+    ContextualRecallMetric,
+    ContextualRelevancyMetric
+)
 
 from dotenv import load_dotenv
 
@@ -43,9 +48,9 @@ gpt4 = GPT4ChatModel()
 # --- CSV Dataset Loading ---
 def load_golden_set_csv(filepath):
     """
-    Load Q&A pairs from a CSV file.
-    Expected columns: question, expected_answer, and optional metadata
-    Returns a list of dictionaries with question, expected_answer, and metadata
+    Load Q&A pairs from a CSV file for RAG evaluation.
+    Expected columns: question, expected_answer, retrieval_context, context, and optional metadata
+    Returns a list of dictionaries with all required fields for RAG metrics.
     """
     qa_pairs = []
 
@@ -55,14 +60,20 @@ def load_golden_set_csv(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
 
-        required_columns = {'question', 'expected_answer'}
+        required_columns = {'question', 'expected_answer', 'retrieval_context', 'context'}
         if not required_columns.issubset(reader.fieldnames):
             raise ValueError(f"CSV must contain columns: {required_columns}. Found: {reader.fieldnames}")
 
         for row in reader:
+            # Parse pipe-separated context strings into lists
+            retrieval_context = [doc.strip() for doc in row['retrieval_context'].split('|') if doc.strip()]
+            context = [doc.strip() for doc in row['context'].split('|') if doc.strip()]
+            
             qa_pair = {
                 'question': row['question'].strip(),
                 'expected_answer': row['expected_answer'].strip(),
+                'retrieval_context': retrieval_context,
+                'context': context,
                 'metadata': row.get('metadata', '').strip() if 'metadata' in row else ''
             }
             qa_pairs.append(qa_pair)
@@ -102,8 +113,9 @@ def generate_answers_for_dataset(qa_pairs):
 # --- DeepEval Evaluation ---
 def run_batch_evaluation(qa_pairs):
     """
-    Evaluate all Q&A pairs using DeepEval metrics.
-    Creates test cases and runs GEval metrics for fluency, coherence, relevance, and correctness.
+    Evaluate all Q&A pairs using DeepEval RAG metrics.
+    Creates test cases and runs RAG-specific metrics: AnswerRelevancy, Faithfulness, 
+    ContextualPrecision, ContextualRecall, and ContextualRelevancy.
     Returns both test_cases and metrics for accessing scores.
     """
     test_cases = []
@@ -112,55 +124,46 @@ def run_batch_evaluation(qa_pairs):
         test_case = LLMTestCase(
             input=qa_pair['question'],
             actual_output=qa_pair['generated_answer'],
-            expected_output=qa_pair['expected_answer']
+            expected_output=qa_pair['expected_answer'],
+            retrieval_context=qa_pair['retrieval_context'],
+            context=qa_pair['context']
         )
         test_cases.append(test_case)
 
-    # Define GEval metrics
-    fluency = GEval(
-        name="Fluency",
-        criteria="Is the output grammatically correct and easy to understand?",
-        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-        threshold = 0.5
+    # Define RAG-specific metrics
+    # Note: Using gpt-4o instead of gpt-4 because RAG metrics require structured outputs
+    answer_relevancy = AnswerRelevancyMetric(
+        threshold=0.7,
+        model="gpt-4o"
     )
 
-    coherence = GEval(
-        name="Coherence",
-        criteria="Is the output logically structured and cohesive?",
-        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-        threshold = 0.5
+    faithfulness = FaithfulnessMetric(
+        threshold=0.7,
+        model="gpt-4o"
     )
 
-    relevance = GEval(
-        name="Relevance",
-        criteria="Does the output appropriately and directly answer the input question?",
-        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-        threshold=0.5
+    contextual_precision = ContextualPrecisionMetric(
+        threshold=0.7,
+        model="gpt-4o"
     )
 
-    correctness = GEval(
-        name="Correctness",
-        criteria="Is the actual output factually correct and consistent with the expected answer?",
-        evaluation_steps=[
-            "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
-            "You should also heavily penalize omission of detail",
-            "Vague language, or contradicting OPINIONS, are OK"
-        ],
-        rubric=[
-            Rubric(score_range=(0, 2), expected_outcome="Factually incorrect."),
-            Rubric(score_range=(3, 6), expected_outcome="Mostly correct."),
-            Rubric(score_range=(7, 9), expected_outcome="Correct but missing minor details."),
-            Rubric(score_range=(10, 10), expected_outcome="100% correct."),
-        ],
-        evaluation_params=[
-            # LLMTestCaseParams.INPUT,
-            # LLMTestCaseParams.ACTUAL_OUTPUT,
-            LLMTestCaseParams.EXPECTED_OUTPUT
-        ],
-        threshold=0.5
+    contextual_recall = ContextualRecallMetric(
+        threshold=0.7,
+        model="gpt-4o"
     )
 
-    metrics = [fluency, coherence, relevance, correctness]
+    contextual_relevancy = ContextualRelevancyMetric(
+        threshold=0.7,
+        model="gpt-4o"
+    )
+
+    metrics = [
+        answer_relevancy,
+        faithfulness,
+        contextual_precision,
+        contextual_recall,
+        contextual_relevancy
+    ]
 
     # Run DeepEval (fixed: removed skip_on_missing_params parameter)
     print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")

@@ -17,8 +17,118 @@ def _safe(s: str) -> str:
     return html.escape(s or "", quote=True)
 
 
+def _to_float(v, default=0.0) -> float:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_bool(v, default=None):
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        if v.lower() in ("true", "1", "yes"):
+            return True
+        if v.lower() in ("false", "0", "no"):
+            return False
+    return default
+
+
+def _norm_metric_key(k) -> str:
+    if not isinstance(k, str):
+        return ""
+    return k.strip().lower()
+
+
+def _normalize_metrics_dict(raw_metrics):
+    metrics_by_norm = {}
+    display_by_norm = {}
+    if isinstance(raw_metrics, dict):
+        for k, v in raw_metrics.items():
+            if not isinstance(k, str):
+                continue
+            display = k.strip()
+            nk = _norm_metric_key(k)
+            if not nk:
+                continue
+            metrics_by_norm[nk] = v
+            display_by_norm.setdefault(nk, display)
+    return metrics_by_norm, display_by_norm
+
+
+def _item_passed(item: dict, metric_names: list[str], display_to_norm: dict[str, str]) -> bool:
+    direct = _to_bool(item.get("passed"), default=None)
+    if direct is not None:
+        return direct
+
+    status = (item.get("status") or "").strip().lower()
+    if status in ("pass", "passed", "ok", "success"):
+        return True
+    if status in ("fail", "failed", "error"):
+        return False
+
+    raw_metrics = item.get("evaluation_metrics", {}) or {}
+    metrics_by_norm, _ = _normalize_metrics_dict(raw_metrics)
+
+    metric_pass_flags = []
+    has_any_flag = False
+
+    for m_display in metric_names:
+        nk = display_to_norm.get(m_display, _norm_metric_key(m_display))
+        md = metrics_by_norm.get(nk, {}) or {}
+        p = _to_bool(md.get("passed"), default=None)
+        if p is not None:
+            has_any_flag = True
+            metric_pass_flags.append(p)
+
+    if has_any_flag:
+        return all(metric_pass_flags)
+
+    fallback_flags = []
+    for m_display in metric_names:
+        nk = display_to_norm.get(m_display, _norm_metric_key(m_display))
+        md = metrics_by_norm.get(nk, {}) or {}
+        score = _to_float(md.get("score", 0.0), default=0.0)
+        thr = md.get("threshold", None)
+        if thr is None:
+            fallback_flags.append(score > 0)
+        else:
+            fallback_flags.append(score >= _to_float(thr, default=0.0))
+    return all(fallback_flags)
+
+
+# Distinct colors for up to 10 dynamic metrics
+METRIC_COLORS = [
+    "#a855f7",  # purple
+    "#fde047",  # yellow
+    "#3b82f6",  # blue
+    "#10b981",  # green
+    "#f97316",  # orange
+    "#ec4899",  # pink
+    "#14b8a6",  # teal
+    "#ef4444",  # red
+    "#8b5cf6",  # violet
+    "#22d3ee",  # cyan
+]
+
+# Card background/border tints paired with METRIC_COLORS
+CARD_STYLES = [
+    ("bg-[#1e1a2e]", "border-[#3d2f6a]/40"),
+    ("bg-[#1e1e14]", "border-[#6a5e1a]/40"),
+    ("bg-[#141a2e]", "border-[#1e3a6a]/40"),
+    ("bg-[#141e1a]", "border-[#1a4a2e]/40"),
+    ("bg-[#2e1a14]", "border-[#6a2e1a]/40"),
+    ("bg-[#2e141e]", "border-[#6a1a3a]/40"),
+    ("bg-[#141e1e]", "border-[#1a4a4a]/40"),
+    ("bg-[#2e1414]", "border-[#6a1a1a]/40"),
+    ("bg-[#1e1a2e]", "border-[#3d2f6a]/40"),
+    ("bg-[#141e2e]", "border-[#1a3a6a]/40"),
+]
+
+
 def create_full_dark_dashboard(json_filepath, html_filepath):
-    # 1. Load the JSON data
+    # 1) Load JSON
     try:
         with open(json_filepath, "r", encoding="utf-8") as f:
             raw = json.load(f)
@@ -34,126 +144,291 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
         print("Error: JSON did not contain a list of evaluation items.")
         return
 
-    # 2. Process data and calculate Pass/Fail
-    threshold = 0.95
+    # 2) Discover ALL metrics across ALL rows
+    all_metric_norm_set = set()
+    display_by_norm_global = {}
+
+    for item in data:
+        raw_metrics = item.get("evaluation_metrics", {}) or {}
+        metrics_by_norm, display_by_norm = _normalize_metrics_dict(raw_metrics)
+        all_metric_norm_set.update(metrics_by_norm.keys())
+        for nk, disp in display_by_norm.items():
+            display_by_norm_global.setdefault(nk, disp)
+
+    # Stable display order: alphabetical by display name
+    all_metric_names = sorted(
+        [display_by_norm_global.get(nk, nk) for nk in all_metric_norm_set]
+    )
+
+    # Map display -> norm
+    display_to_norm = {display_by_norm_global.get(nk, nk): nk for nk in all_metric_norm_set}
+
+    # Assign a color to each metric (stable, by sorted order)
+    metric_color = {m: METRIC_COLORS[i % len(METRIC_COLORS)] for i, m in enumerate(all_metric_names)}
+    metric_card_style = {m: CARD_STYLES[i % len(CARD_STYLES)] for i, m in enumerate(all_metric_names)}
+
     total_cases = len(data)
     passed_cases = 0
 
-    metric_names = ["Fluency", "Correctness", "Coherence", "Relevance"]
-
     chart_labels = []
-    chart_data = {m: [] for m in metric_names}
-    all_scores = []
+    # chart_data[metric_display] = list of scores per row
+    chart_data = {m: [] for m in all_metric_names}
 
-    # ✅ THIS will hold ALL rows for the table (not just failing ones)
+    all_scores = []
+    # For summary cards: accumulate scores per metric
+    metric_all_scores = {m: [] for m in all_metric_names}
+
     table_items = []
 
     for i, item in enumerate(data):
         q = item.get("question", f"Q{i + 1}")
         chart_labels.append((q[:15] + "...") if len(q) > 15 else q)
 
-        metrics = item.get("evaluation_metrics", {}) or {}
+        raw_metrics = item.get("evaluation_metrics", {}) or {}
+        metrics_by_norm, _ = _normalize_metrics_dict(raw_metrics)
 
-        passed = True
+        per_metric_score = {}
+        per_metric_reason = {}
+        per_metric_threshold = {}
+        per_metric_passed = {}
+
         lowest_metric = ""
         lowest_score = 1.0
-        failure_reason = ""
+        lowest_reason = ""
 
-        # Keep also per-metric reasons for tooltip (no UI changes, just more info)
-        per_metric_reason = {}
-        per_metric_score = {}
+        for m_display in all_metric_names:
+            nk = display_to_norm.get(m_display, _norm_metric_key(m_display))
+            md = metrics_by_norm.get(nk, {}) or {}
 
-        for m_name in metric_names:
-            metric_data = metrics.get(m_name, {}) or {}
-            score = metric_data.get("score", 0)
-            reason = metric_data.get("reason", "No reason provided.")
+            score_f = _to_float(md.get("score", 0.0), default=0.0)
+            reason = md.get("reason", "No reason provided.")
+            thr = md.get("threshold", None)
+            thr_f = _to_float(thr, default=0.0) if thr is not None else None
+            mp = _to_bool(md.get("passed"), default=None)
 
-            try:
-                score_f = float(score)
-            except (TypeError, ValueError):
-                score_f = 0.0
+            per_metric_score[m_display] = score_f
+            per_metric_reason[m_display] = reason
+            per_metric_threshold[m_display] = thr_f
+            per_metric_passed[m_display] = mp
 
-            chart_data[m_name].append(score_f)
             all_scores.append(score_f)
-
-            per_metric_score[m_name] = score_f
-            per_metric_reason[m_name] = reason
+            metric_all_scores[m_display].append(score_f)
+            chart_data[m_display].append(score_f)
 
             if score_f < lowest_score:
                 lowest_score = score_f
-                lowest_metric = m_name
-                failure_reason = reason
+                lowest_metric = m_display
+                lowest_reason = reason
 
-            if score_f < threshold:
-                passed = False
-
-        if passed:
+        item_passed = _item_passed(item, all_metric_names, display_to_norm)
+        if item_passed:
             passed_cases += 1
 
-        # ✅ Add EVERY row to the table
-        table_items.append(
-            {
-                "metric": lowest_metric,       # keep badge as "most problematic" metric
-                "score": lowest_score,
-                "passed": passed,              # only used in tooltip (no UI changes)
-                "input": item.get("question", ""),
-                "output": item.get("generated_answer", ""),
-                "expected": item.get("expected_answer", ""),
-                "metadata": item.get("metadata", ""),
-                "timestamp": item.get("timestamp", ""),
-                "failure_reason": failure_reason,
-                "per_metric_score": per_metric_score,
-                "per_metric_reason": per_metric_reason,
-            }
-        )
+        failed_metrics = [m for m in all_metric_names if per_metric_passed.get(m) is False]
 
-    pass_rate = (passed_cases / total_cases) * 100 if total_cases > 0 else 0
+        if failed_metrics:
+            badge_metric = min(failed_metrics, key=lambda m: per_metric_score.get(m, 1.0))
+            badge_kind = "FAILED METRIC"
+            badge_metric_score = per_metric_score.get(badge_metric, lowest_score)
+        elif lowest_metric:
+            badge_metric = lowest_metric
+            badge_kind = "LOWEST METRIC"
+            badge_metric_score = lowest_score
+        else:
+            badge_metric = "N/A"
+            badge_kind = "NO METRICS"
+            badge_metric_score = 0.0
+
+        table_items.append({
+            "idx": i,
+            "passed": item_passed,
+            "metric": badge_metric,
+            "metric_kind": badge_kind,
+            "metric_score": badge_metric_score,
+            "lowest_score": lowest_score,
+            "question": item.get("question", ""),
+            "generated_answer": item.get("generated_answer", ""),
+            "expected_answer": item.get("expected_answer", ""),
+            "metadata": item.get("metadata", ""),
+            "timestamp": item.get("timestamp", ""),
+            "status": item.get("status", ""),
+            "evaluation_metrics": {
+                m: {
+                    "score": per_metric_score.get(m, 0.0),
+                    "reason": per_metric_reason.get(m, ""),
+                    "threshold": per_metric_threshold.get(m, None),
+                    "passed": per_metric_passed.get(m, None),
+                }
+                for m in all_metric_names
+            },
+            "lowest_reason": lowest_reason,
+        })
+
     failing_cases = total_cases - passed_cases
+    pass_rate = (passed_cases / total_cases) * 100 if total_cases > 0 else 0
     avg_model_score = mean(all_scores) if all_scores else 0.0
 
-    # 3. Build the Table HTML (now for ALL rows)
-    failing_rows_html = ""
+    # Avg score per metric (for summary cards)
+    metric_avg = {m: (mean(metric_all_scores[m]) if metric_all_scores[m] else 0.0) for m in all_metric_names}
+
+    table_items.sort(key=lambda r: (r["passed"],))
+
+    # ── Table rows HTML ──────────────────────────────────────────────────────
+    rows_html = ""
     for row in table_items:
-        input_text = row["input"] or ""
-        output_text = row["output"] or ""
-        expected_text = row["expected"] or ""
-        meta_text = row.get("metadata", "") or ""
-        ts_text = row.get("timestamp", "") or ""
+        i = row["idx"]
+        status_text = "PASSED" if row["passed"] else "FAILED"
+
+        input_text = row["question"] or ""
+        output_text = row["generated_answer"] or ""
+        expected_text = row["expected_answer"] or ""
+        meta_text = row["metadata"] or ""
+        ts_text = row["timestamp"] or ""
+        top_status = row.get("status", "") or ""
 
         input_trunc = (input_text[:50] + "...") if len(input_text) > 50 else input_text
         output_trunc = (output_text[:80] + "...") if len(output_text) > 80 else output_text
 
-        badge_color = "bg-purple-500/20 text-purple-400 border-purple-500/30"
-        if row["metric"] == "Correctness":
-            badge_color = "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-        elif row["metric"] == "Fluency":
-            badge_color = "bg-blue-500/20 text-blue-400 border-blue-500/30"
-
-        # Tooltip: show pass/fail + expected + all metric scores/reasons (no layout change)
-        status_text = "PASSED" if row["passed"] else "FAILED"
-        metrics_summary = " | ".join(
-            f"{m}={row['per_metric_score'].get(m, 0):.3f}: {row['per_metric_reason'].get(m, '')}"
-            for m in metric_names
-        )
-
         tooltip_text = (
-            f"STATUS: {status_text} | METADATA: {meta_text} | TIMESTAMP: {ts_text} | "
-            f"EXPECTED: {expected_text} | "
-            f"LOWEST METRIC: {row['metric']} ({row['score']:.3f}) | "
-            f"DETAILS: {metrics_summary}"
+            f"STATUS: {status_text} | JSON status: {top_status} | "
+            f"{row['metric_kind']}: {row['metric']} ({row['metric_score']:.3f})"
         )
 
-        failing_rows_html += f"""
-        <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-help" title="{_safe(tooltip_text)}">
-            <td class="py-4 px-4 whitespace-nowrap">
-                <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border {badge_color}">{_safe(row['metric'])}</span>
-            </td>
+        detail_row_id = f"details_{i}"
+
+        metric_cards_html = ""
+        for m in all_metric_names:
+            md = row["evaluation_metrics"].get(m, {}) or {}
+            sc = md.get("score", 0.0)
+            rs = md.get("reason", "")
+            th = md.get("threshold", None)
+            mp = md.get("passed", None)
+
+            th_txt = "n/a" if th is None else f"{th:.3f}"
+            mp_txt = "n/a" if mp is None else ("true" if mp else "false")
+
+            metric_cards_html += f"""
+            <div class="border border-gray-800/50 rounded-md p-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-gray-200 font-semibold text-xs">{_safe(m)}</div>
+                    <div class="text-gray-300 text-xs">{sc:.3f}</div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
+                    <div>threshold: {th_txt}</div>
+                    <div>passed: {mp_txt}</div>
+                </div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">{_safe(rs)}</div>
+            </div>
+            """
+
+        rows_html += f"""
+        <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
+            title="{_safe(tooltip_text)}" data-target="{detail_row_id}">
+          <td class="py-4 px-4 whitespace-nowrap">
+                <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
+                    {'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' if row['passed'] else 'bg-rose-500/20 text-rose-400 border-rose-500/30'}">
+                    {'Passed' if row['passed'] else 'Failed'}
+                </span>
+          </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">{_safe(input_trunc)}</td>
             <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">{_safe(output_trunc)}</td>
         </tr>
+
+        <tr id="{detail_row_id}" class="hidden border-b border-gray-800/50 bg-[#15161b]">
+            <td colspan="3" class="py-4 px-4 text-xs text-gray-300">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap gap-6">
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Status</div>
+                            <div class="text-gray-300">{_safe(status_text)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">JSON status</div>
+                            <div class="text-gray-300">{_safe(top_status)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Metadata</div>
+                            <div class="text-gray-300">{_safe(meta_text)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
+                            <div class="text-gray-300">{_safe(ts_text)}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Question</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">{_safe(input_text)}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">{_safe(output_text)}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Expected Answer</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">{_safe(expected_text)}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-2">Evaluation Metrics</div>
+                        <div class="space-y-2">
+                            {metric_cards_html}
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
         """
 
-    # 4. Generate the HTML Template (unchanged UI/colors/layout)
+    # ── Build JS datasets dynamically ───────────────────────────────────────
+    DASH_PATTERNS = ['[]', '[6,3]', '[2,3]', '[8,3,2,3]', '[12,3]',
+                     '[4,2,4,2]', '[1,4]', '[10,2,2,2]', '[6,2,2,2,2,2]', '[3,3,3,3]']
+    POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star',
+                    'cross', 'crossRot', 'dash', 'line', 'circle']
+
+    js_datasets = []
+    for idx, m in enumerate(all_metric_names):
+        color = metric_color[m]
+        scores = chart_data[m]
+        dash = DASH_PATTERNS[idx % len(DASH_PATTERNS)]
+        pstyle = POINT_STYLES[idx % len(POINT_STYLES)]
+        lines_parts = [
+            '{',
+            f'                label: {json.dumps(m)},',
+            f'                data: {json.dumps(scores)},',
+            f'                backgroundColor: {json.dumps(color + "33")},',
+            f'                borderColor: {json.dumps(color)},',
+            '                borderWidth: 2.5,',
+            f'                borderDash: {dash},',
+            '                tension: 0.4,',
+            '                pointRadius: 5,',
+            '                pointHoverRadius: 8,',
+            f'                pointStyle: {json.dumps(pstyle)},',
+            '                fill: false',
+            '            }',
+        ]
+        js_datasets.append('\n'.join(lines_parts))
+    js_datasets_str = ',\n'.join(js_datasets)
+
+    # ── Build summary cards HTML dynamically ─────────────────────────────────
+    summary_cards_html = ""
+    for m in all_metric_names:
+        color = metric_color[m]
+        bg, border = metric_card_style[m]
+        avg = metric_avg[m]
+        # Short label: strip "Metric" suffix for display if present
+        short_label = m.replace("Metric", "").strip()
+        summary_cards_html += f"""
+        <div class="{bg} border {border} rounded-md p-3 text-center">
+            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:{color}"></div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">{_safe(short_label)}</div>
+            <div class="text-lg font-bold text-white mt-1">{avg:.2f}</div>
+        </div>
+        """
+
+    # ── HTML template ────────────────────────────────────────────────────────
     html_template = f"""<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -168,6 +443,7 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
         .glass-panel {{ background-color: #15161b; border: 1px solid #23252b; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }}
         .nav-item {{ padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; border-radius: 0.375rem; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }}
         .nav-item:hover, .nav-item.active {{ background-color: #1f2128; color: #f3f4f6; }}
+        .font-mono {{ font-family: 'Courier New', monospace; }}
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -223,32 +499,36 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                     </div>
                     <div class="text-center mt-6">
                         <p class="text-white font-medium">{failing_cases} failing test cases</p>
-                        <p class="text-gray-500 text-xs mt-1">Threshold set to 0.95</p>
+                        <p class="text-gray-500 text-xs mt-1">based on JSON passed/status fields</p>
                     </div>
                 </div>
             </div>
 
             <div class="glass-panel p-0 xl:col-span-2 flex flex-col h-[350px]">
                 <div class="p-6 pb-4 border-b border-gray-800/50 flex justify-between items-center">
-                    <h3 class="text-gray-200 font-medium text-sm">Top failing LLM outputs <span class="text-xs text-gray-500 font-normal ml-2 hover:text-gray-300 transition-colors cursor-help" title="Hover over rows to see detailed reasoning from your JSON.">[Hover for reason]</span></h3>
+                    <h3 class="text-gray-200 font-medium text-sm">Top failing LLM outputs
+                        <span class="text-xs text-gray-500 font-normal ml-2 hover:text-gray-300 transition-colors cursor-help"
+                              title="Click a row to expand and see all fields + ALL metrics from JSON.">[Click for details]</span>
+                    </h3>
                 </div>
                 <div class="flex-1 overflow-y-auto px-2">
                     <table class="w-full text-left">
                         <thead class="sticky top-0 bg-[#15161b]">
                             <tr class="text-[11px] text-gray-500 uppercase tracking-wider">
-                                <th class="pb-3 pt-4 font-semibold px-4 w-32">Metric</th>
+                                <th class="pb-3 pt-4 font-semibold px-4 w-32">Status</th>
                                 <th class="pb-3 pt-4 font-semibold px-4 w-1/3">Input</th>
                                 <th class="pb-3 pt-4 font-semibold px-4">LLM Output</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {failing_rows_html}
+                            {rows_html}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- Bar Chart + Summary Cards -->
         <div class="glass-panel p-6">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-4">
@@ -256,13 +536,19 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                     <span class="px-2.5 py-1 rounded bg-[#2e2348] text-[#a78bfa] text-[10px] uppercase font-bold tracking-wider border border-[#4c3a7a]">All Metrics</span>
                 </div>
             </div>
-            <div class="h-64 w-full">
-                <canvas id="qualityLineChart"></canvas>
+            <div class="h-64 w-full mb-6">
+                <canvas id="qualityBarChart"></canvas>
+            </div>
+            <!-- Per-metric average summary cards -->
+            <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+                {summary_cards_html}
             </div>
         </div>
+
     </main>
 
     <script>
+        // Donut Chart
         const passCtx = document.getElementById('passRateChart').getContext('2d');
         new Chart(passCtx, {{
             type: 'doughnut',
@@ -282,52 +568,14 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
             }}
         }});
 
-        const lineCtx = document.getElementById('qualityLineChart').getContext('2d');
-        new Chart(lineCtx, {{
+        // Line Chart — dynamic metrics
+        const barCtx = document.getElementById('qualityBarChart').getContext('2d');
+        new Chart(barCtx, {{
             type: 'line',
             data: {{
                 labels: {json.dumps(chart_labels)},
                 datasets: [
-                    {{
-                        label: 'Fluency',
-                        data: {json.dumps(chart_data['Fluency'])},
-                        borderColor: '#a855f7',
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#0b0c10',
-                        pointBorderColor: '#a855f7'
-                    }},
-                    {{
-                        label: 'Correctness',
-                        data: {json.dumps(chart_data['Correctness'])},
-                        borderColor: '#fde047',
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#0b0c10',
-                        pointBorderColor: '#fde047'
-                    }},
-                    {{
-                        label: 'Coherence',
-                        data: {json.dumps(chart_data['Coherence'])},
-                        borderColor: '#3b82f6',
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#0b0c10',
-                        pointBorderColor: '#3b82f6'
-                    }},
-                    {{
-                        label: 'Relevance',
-                        data: {json.dumps(chart_data['Relevance'])},
-                        borderColor: '#10b981',
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#0b0c10',
-                        pointBorderColor: '#10b981'
-                    }}
+                    {js_datasets_str}
                 ]
             }},
             options: {{
@@ -335,13 +583,43 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                 maintainAspectRatio: false,
                 interaction: {{ intersect: false, mode: 'index' }},
                 scales: {{
-                    x: {{ grid: {{ color: 'rgba(31, 41, 55, 0.4)', drawBorder: false }}, ticks: {{ color: '#6b7280', font: {{ size: 11 }} }} }},
-                    y: {{ min: 0.7, max: 1.05, grid: {{ color: 'rgba(31, 41, 55, 0.4)', drawBorder: false }}, ticks: {{ color: '#6b7280', font: {{ size: 11 }} }} }}
+                    x: {{
+                        grid: {{ color: 'rgba(31, 41, 55, 0.4)', drawBorder: false }},
+                        ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                    }},
+                    y: {{
+                        min: 0.0,
+                        max: 1.05,
+                        grid: {{ color: 'rgba(31, 41, 55, 0.4)', drawBorder: false }},
+                        ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                    }}
                 }},
                 plugins: {{
-                    legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }}
+                    legend: {{
+                        position: 'top',
+                        align: 'end',
+                        labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }}
+                    }},
+                    tooltip: {{
+                        backgroundColor: '#1f2028',
+                        borderColor: '#2e3040',
+                        borderWidth: 1,
+                        titleColor: '#e5e7eb',
+                        bodyColor: '#9ca3af',
+                        padding: 10
+                    }}
                 }}
             }}
+        }});
+
+        // Expand/collapse details row on click
+        document.addEventListener('click', (e) => {{
+            const tr = e.target.closest('tr[data-target]');
+            if (!tr) return;
+            const targetId = tr.getAttribute('data-target');
+            const detailsRow = document.getElementById(targetId);
+            if (!detailsRow) return;
+            detailsRow.classList.toggle('hidden');
         }});
     </script>
 </body>
