@@ -1,0 +1,4 @@
+question,expected_answer,metadata
+"What is Python?","Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms including procedural, object-oriented, and functional programming.","basic_knowledge"
+"How does async/await work in Python?","Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.","advanced_concepts"
+"What is the difference between a list and a tuple?","Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().","data_structures"

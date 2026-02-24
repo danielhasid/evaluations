@@ -1,0 +1,315 @@
+import os
+import csv
+import json
+from datetime import datetime
+import openai
+from deepeval import evaluate
+from deepeval.metrics.g_eval import Rubric
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.metrics import GEval
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# --- OpenAI setup ---
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set.")
+client = openai.OpenAI(api_key=api_key)
+
+
+class GPT4ChatModel:
+    def __init__(self):
+        self.model_name = "gpt-4"
+        self.client = client
+        self.temperature = 0.7
+
+    def generate(self, messages):
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=self.temperature
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            return f"An error occurred: {e}"
+
+
+gpt4 = GPT4ChatModel()
+
+
+# --- CSV Dataset Loading ---
+def load_golden_set_csv(filepath):
+    """
+    Load Q&A pairs from a CSV file.
+    Expected columns: question, expected_answer, and optional metadata
+    Returns a list of dictionaries with question, expected_answer, and metadata
+    """
+    qa_pairs = []
+
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"CSV file not found: {filepath}")
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+
+        required_columns = {'question', 'expected_answer'}
+        if not required_columns.issubset(reader.fieldnames):
+            raise ValueError(f"CSV must contain columns: {required_columns}. Found: {reader.fieldnames}")
+
+        for row in reader:
+            qa_pair = {
+                'question': row['question'].strip(),
+                'expected_answer': row['expected_answer'].strip(),
+                'metadata': row.get('metadata', '').strip() if 'metadata' in row else ''
+            }
+            qa_pairs.append(qa_pair)
+
+    print(f"✅ Loaded {len(qa_pairs)} Q&A pairs from {filepath}")
+    return qa_pairs
+
+
+# --- Answer Generation ---
+def generate_answer(question):
+    """
+    Generate an answer for a given question using GPT-4.
+    Returns the generated answer as a string.
+    """
+    messages = [{
+        "role": "user",
+        "content": f"Answer the following question concisely and accurately:\n\n{question}"
+    }]
+    return gpt4.generate(messages)
+
+
+def generate_answers_for_dataset(qa_pairs):
+    """
+    Generate answers for all questions in the dataset.
+    Returns the qa_pairs list with an added 'generated_answer' field.
+    """
+    print(f"\n🤖 Generating answers for {len(qa_pairs)} questions...")
+
+    for i, qa_pair in enumerate(qa_pairs, 1):
+        print(f"  [{i}/{len(qa_pairs)}] Generating answer for: {qa_pair['question'][:60]}...")
+        qa_pair['generated_answer'] = generate_answer(qa_pair['question'])
+
+    print("✅ Answer generation complete!")
+    return qa_pairs
+
+
+# --- DeepEval Evaluation ---
+def run_batch_evaluation(qa_pairs):
+    """
+    Evaluate all Q&A pairs using DeepEval metrics.
+    Creates test cases and runs GEval metrics for fluency, coherence, relevance, and correctness.
+    Returns both test_cases and metrics for accessing scores.
+    """
+    test_cases = []
+
+    for qa_pair in qa_pairs:
+        test_case = LLMTestCase(
+            input=qa_pair['question'],
+            actual_output=qa_pair['generated_answer'],
+            expected_output=qa_pair['expected_answer']
+        )
+        test_cases.append(test_case)
+
+    # Define GEval metrics
+    fluency = GEval(
+        name="Fluency",
+        criteria="Is the output grammatically correct and easy to understand?",
+        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT]
+    )
+
+    coherence = GEval(
+        name="Coherence",
+        criteria="Is the output logically structured and cohesive?",
+        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT]
+    )
+
+    relevance = GEval(
+        name="Relevance",
+        criteria="Does the output appropriately and directly answer the input question?",
+        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT]
+    )
+
+    correctness = GEval(
+        name="Correctness",
+        criteria="Is the actual output factually correct and consistent with the expected answer?",
+        evaluation_steps=[
+            "Check whether the facts in 'actual output' contradicts any facts in 'expected output'",
+            "You should also heavily penalize omission of detail",
+            "Vague language, or contradicting OPINIONS, are OK"
+        ],
+        rubric=[
+            Rubric(score_range=(0, 2), expected_outcome="Factually incorrect."),
+            Rubric(score_range=(3, 6), expected_outcome="Mostly correct."),
+            Rubric(score_range=(7, 9), expected_outcome="Correct but missing minor details."),
+            Rubric(score_range=(10, 10), expected_outcome="100% correct."),
+        ],
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.EXPECTED_OUTPUT
+        ]
+    )
+
+    metrics = [fluency, coherence, relevance, correctness]
+
+    # Run DeepEval (fixed: removed skip_on_missing_params parameter)
+    print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")
+    evaluate(
+        test_cases=test_cases,
+        metrics=metrics
+    )
+
+    return test_cases, metrics
+
+
+# --- Results Output ---
+def display_results(qa_pairs, test_cases):
+    """
+    Display detailed results for each Q&A pair.
+    Shows metric scores and reasons from the JSON file.
+    """
+    print("\n" + "=" * 80)
+    print("📊 EVALUATION RESULTS")
+    print("=" * 80)
+
+    # Load the results from JSON to get the metrics with reasons
+    try:
+        with open("evaluation_results.json", 'r', encoding='utf-8') as f:
+            results = json.load(f)
+    except FileNotFoundError:
+        results = []
+
+    for i, qa_pair in enumerate(qa_pairs, 1):
+        print(f"\n[Question {i}]")
+        print(f"Q: {qa_pair['question']}")
+        print(f"\n[Generated Answer]")
+        print(f"A: {qa_pair['generated_answer']}")
+        print(f"\n[Expected Answer]")
+        print(f"E: {qa_pair['expected_answer']}")
+
+        if qa_pair.get('metadata'):
+            print(f"\n[Metadata]: {qa_pair['metadata']}")
+
+        # Display metrics with scores and reasons from JSON
+        if i <= len(results) and results[i - 1].get('evaluation_metrics'):
+            print(f"\n[Evaluation Metrics]")
+            for metric_name, metric_data in results[i - 1]['evaluation_metrics'].items():
+                if isinstance(metric_data, dict):
+                    score = metric_data.get('score', 'N/A')
+                    reason = metric_data.get('reason', '')
+                    print(f"  {metric_name}: {score:.4f}" if isinstance(score, float) else f"  {metric_name}: {score}")
+                    if reason:
+                        print(f"    Reason: {reason}")
+                else:
+                    # Fallback for old format (just score)
+                    print(f"  {metric_name}: {metric_data:.4f}" if isinstance(metric_data,
+                                                                              float) else f"  {metric_name}: {metric_data}")
+
+        print("-" * 80)
+
+
+def save_initial_results(qa_pairs, output_filepath="evaluation_results.json"):
+    """
+    Save initial Q&A pairs with generated answers to JSON file before evaluation.
+    This creates the results file without metric scores.
+    """
+    results = []
+
+    for qa_pair in qa_pairs:
+        result = {
+            'question': qa_pair['question'],
+            'generated_answer': qa_pair['generated_answer'],
+            'expected_answer': qa_pair['expected_answer'],
+            'metadata': qa_pair.get('metadata', ''),
+            'timestamp': datetime.now().isoformat(),
+            'evaluation_metrics': None
+        }
+        results.append(result)
+
+    with open(output_filepath, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+
+    print(f"\n💾 Initial results saved to: {output_filepath}")
+
+
+def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filepath="evaluation_results.json"):
+    """
+    Update the JSON file with evaluation metric scores and reasons after DeepEval completes.
+    Since evaluate() runs metrics in bulk, we measure each test case individually
+    to extract the scores and reasoning properly.
+    """
+    with open(output_filepath, 'r', encoding='utf-8') as f:
+        results = json.load(f)
+
+    print("\n📊 Extracting metric scores and reasons...")
+
+    for i, (result, test_case) in enumerate(zip(results, test_cases)):
+        metric_data = {}
+
+        # After evaluate() runs, we need to extract scores by measuring each metric
+        # on each test case individually to access the score and reason attributes
+        for metric in metrics_list:
+            try:
+                # Measure the metric on this specific test case
+                metric.measure(test_case)
+
+                # Access the score and reason from the metric object
+                if hasattr(metric, 'score') and metric.score is not None:
+                    # Get metric name
+                    metric_name = getattr(metric, 'name', metric.__class__.__name__)
+
+                    # Store both score and reason
+                    metric_data[metric_name] = {
+                        'score': metric.score,
+                        'reason': getattr(metric, 'reason', None)
+                    }
+
+                    print(f"  Test case {i + 1}, {metric_name}: {metric.score:.4f}")
+                    if hasattr(metric, 'reason') and metric.reason:
+                        reason_preview = metric.reason[:100] + "..." if len(metric.reason) > 100 else metric.reason
+                        print(f"    Reason: {reason_preview}")
+            except Exception as e:
+                print(f"  Warning: Could not extract metric data for {metric} on test case {i}: {e}")
+
+        result['evaluation_metrics'] = metric_data if metric_data else None
+
+    with open(output_filepath, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+
+    print(f"\n💾 Results updated with evaluation metrics and reasons in: {output_filepath}")
+
+
+# --- Main Pipeline ---
+def main():
+    INPUT_CSV = "golden_set.csv"
+    OUTPUT_JSON = "evaluation_results.json"
+
+    print("🔹 Loading golden set Q&A pairs from CSV...")
+    qa_pairs = load_golden_set_csv(INPUT_CSV)
+
+    # Generate answers for all questions
+    qa_pairs = generate_answers_for_dataset(qa_pairs)
+
+    # STEP 1: Save initial results (without metrics)
+    save_initial_results(qa_pairs, OUTPUT_JSON)
+
+    # STEP 2: Run DeepEval evaluation
+    test_cases, metrics = run_batch_evaluation(qa_pairs)
+
+    # STEP 3: Update JSON with metrics
+    update_results_with_metrics(qa_pairs, test_cases, metrics, OUTPUT_JSON)
+
+    # Display final results
+    display_results(qa_pairs, test_cases)
+
+    print("\n✅ Evaluation complete!")
+
+
+if __name__ == "__main__":
+    main()
