@@ -44,13 +44,13 @@
                     </div>
                     <div class="text-2xl font-bold mt-1 text-white">Healthy</div>
                 </div>
-                <div class="text-right text-xs text-gray-500 leading-relaxed">based on 3 evaluations</div>
+                <div class="text-right text-xs text-gray-500 leading-relaxed">based on 4 evaluations</div>
             </div>
             <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                 <span class="text-gray-400 text-sm font-medium">Avg Model Score</span>
                 <div class="text-2xl font-bold mt-1 text-emerald-400 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-                    0.94
+                    0.45
                 </div>
             </div>
         </div>
@@ -62,12 +62,12 @@
                     <div class="w-48 h-48 relative">
                         <canvas id="passRateChart"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center mt-2">
-                            <span class="text-4xl font-bold text-white">100.0%</span>
-                            <span class="text-xs text-gray-400 mt-1">3/3 passed</span>
+                            <span class="text-4xl font-bold text-white">50.0%</span>
+                            <span class="text-xs text-gray-400 mt-1">2/4 passed</span>
                         </div>
                     </div>
                     <div class="text-center mt-6">
-                        <p class="text-white font-medium">0 failing test cases</p>
+                        <p class="text-white font-medium">2 failing test cases</p>
                         <p class="text-gray-500 text-xs mt-1">based on JSON passed/status fields</p>
                     </div>
                 </div>
@@ -92,15 +92,15 @@
                         <tbody>
                             
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.980)" data-target="details_0">
+            title="STATUS: FAILED | JSON status: failed | FAILED METRIC: Hallucination (0.193)" data-target="details_0">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
-                    bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                    Passed
+                    bg-rose-500/20 text-rose-400 border-rose-500/30">
+                    Failed
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language known for its clear syn...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language known for its simplicit...</td>
         </tr>
 
         <tr id="details_0" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -109,11 +109,11 @@
                     <div class="flex flex-wrap gap-6">
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Status</div>
-                            <div class="text-gray-300">PASSED</div>
+                            <div class="text-gray-300">FAILED</div>
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">JSON status</div>
-                            <div class="text-gray-300">pass</div>
+                            <div class="text-gray-300">failed</div>
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Metadata</div>
@@ -121,7 +121,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
+                            <div class="text-gray-300">2026-02-24T22:27:17.058193</div>
                         </div>
                     </div>
 
@@ -132,12 +132,12 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language known for its clear syntax and readability. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms such as procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.</div>
                     </div>
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Expected Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms including procedural, object-oriented, and functional programming.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Python is cool</div>
                     </div>
 
                     <div>
@@ -146,14 +146,14 @@
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
-                    <div class="text-gray-300 text-xs">0.980</div>
+                    <div class="text-gray-200 font-semibold text-xs">Hallucination</div>
+                    <div class="text-gray-300 text-xs">0.193</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
                     <div>threshold: 0.500</div>
-                    <div>passed: true</div>
+                    <div>passed: false</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The actual output accurately describes Python as a high-level, interpreted language known for simplicity and readability, and mentions its support for multiple programming paradigms including procedural, object-oriented, and functional programming. No factual contradictions or omissions are present.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The Actual Output does not match the Expected Output, which is simply &#x27;Python is cool&#x27;. The Actual Output provides additional information about Python&#x27;s features and uses, which is not present in the Expected Output. This violates steps 1 and 2, though it does address the general topic from the Input.</div>
             </div>
             
                         </div>
@@ -163,7 +163,78 @@
         </tr>
         
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.846)" data-target="details_1">
+            title="STATUS: FAILED | JSON status: failed | FAILED METRIC: Hallucination (0.206)" data-target="details_3">
+          <td class="py-4 px-4 whitespace-nowrap">
+                <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
+                    bg-rose-500/20 text-rose-400 border-rose-500/30">
+                    Failed
+                </span>
+          </td>
+            <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]"></td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">You didn&#x27;t provide a question. Could you please ask something specific?</td>
+        </tr>
+
+        <tr id="details_3" class="hidden border-b border-gray-800/50 bg-[#15161b]">
+            <td colspan="3" class="py-4 px-4 text-xs text-gray-300">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap gap-6">
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Status</div>
+                            <div class="text-gray-300">FAILED</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">JSON status</div>
+                            <div class="text-gray-300">failed</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Metadata</div>
+                            <div class="text-gray-300"></div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
+                            <div class="text-gray-300">2026-02-24T22:27:17.058193</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Question</div>
+                        <div class="text-gray-200 whitespace-pre-wrap"></div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">You didn&#x27;t provide a question. Could you please ask something specific?</div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Expected Answer</div>
+                        <div class="text-gray-200 whitespace-pre-wrap"></div>
+                    </div>
+
+                    <div>
+                        <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-2">Evaluation Metrics</div>
+                        <div class="space-y-2">
+                            
+            <div class="border border-gray-800/50 rounded-md p-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-gray-200 font-semibold text-xs">Hallucination</div>
+                    <div class="text-gray-300 text-xs">0.206</div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
+                    <div>threshold: 0.500</div>
+                    <div>passed: false</div>
+                </div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The actual output does not match the expected output, which is empty. The actual output introduces new information by prompting the user to ask a question, which is not present in the expected output. While it acknowledges the lack of input, it does not strictly adhere to the requirement of matching the expected output exactly.</div>
+            </div>
+            
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        
+        <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Hallucination (0.728)" data-target="details_1">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -171,7 +242,7 @@
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">How does async/await work in Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a method used for handling asynchronous programming, wh...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a method of handling asynchronous operations, which all...</td>
         </tr>
 
         <tr id="details_1" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -192,7 +263,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
+                            <div class="text-gray-300">2026-02-24T22:27:17.058193</div>
                         </div>
                     </div>
 
@@ -203,9 +274,7 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a method used for handling asynchronous programming, which allows for performing multiple operations at once without waiting for each operation to complete. &#x27;Async&#x27; is a keyword for defining a function as a coroutine, which is a special function that can have its execution paused and resumed. &#x27;Await&#x27; is used to call these coroutines and pause the execution of the function until the awaited coroutine is complete.
-
-This allows Python to handle other tasks in the meantime, which can significantly improve efficiency in programs that involve I/O-bound tasks (like network requests or file reading/writing), where waiting for completion of each task would otherwise cause a lot of idle time. This does not, however, speed up CPU-bound tasks, as Python&#x27;s Global Interpreter Lock (GIL) allows only one thread to execute Python bytecodes at a time.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a method of handling asynchronous operations, which allows for concurrent execution of tasks without the need for multi-threading or multi-processing. &#x27;async&#x27; is a keyword used to define a coroutine function, which is a special kind of function designed to be used with asynchronous operations. &#x27;await&#x27; is used inside the coroutine function to suspend the execution of the function until the awaited task is complete. This allows other tasks to run during the waiting period, improving the efficiency of the program.</div>
                     </div>
 
                     <div>
@@ -219,14 +288,14 @@ This allows Python to handle other tasks in the meantime, which can significantl
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
-                    <div class="text-gray-300 text-xs">0.846</div>
+                    <div class="text-gray-200 font-semibold text-xs">Hallucination</div>
+                    <div class="text-gray-300 text-xs">0.728</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
                     <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response correctly explains that async/await is a pattern for asynchronous code in Python, describes the use of &#x27;async&#x27; to define coroutine functions, and states that &#x27;await&#x27; pauses execution until the coroutine completes. However, it omits the detail that &#x27;await&#x27; allows other tasks to run concurrently, which is a key aspect of async/await&#x27;s utility.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The Actual Output covers the main points from the Expected Output, explaining that &#x27;async&#x27; defines a coroutine and &#x27;await&#x27; pauses execution to allow concurrency. It adds some extra context about not needing multi-threading or multi-processing and describes efficiency improvements, which are not present in the Expected Output. The explanation is accurate and addresses the input, but the inclusion of additional information slightly reduces alignment with the evaluation steps.</div>
             </div>
             
                         </div>
@@ -236,7 +305,7 @@ This allows Python to handle other tasks in the meantime, which can significantl
         </tr>
         
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness (0.987)" data-target="details_2">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Hallucination (0.686)" data-target="details_2">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -244,7 +313,7 @@ This allows Python to handle other tasks in the meantime, which can significantl
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is the difference between a list and a tuple?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list is a mutable data type in Python, meaning it can be changed after it is c...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list and a tuple are both types of data structures in Python that can store mu...</td>
         </tr>
 
         <tr id="details_2" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -265,7 +334,7 @@ This allows Python to handle other tasks in the meantime, which can significantl
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-24T21:46:07.970932</div>
+                            <div class="text-gray-300">2026-02-24T22:27:17.058193</div>
                         </div>
                     </div>
 
@@ -276,7 +345,7 @@ This allows Python to handle other tasks in the meantime, which can significantl
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">A list is a mutable data type in Python, meaning it can be changed after it is created. It is defined by values separated by commas and enclosed within square brackets. A tuple, on the other hand, is an immutable data type, meaning it cannot be changed after it is created. It is defined by values separated by commas and enclosed within parentheses.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">A list and a tuple are both types of data structures in Python that can store multiple items. The main difference between them is that lists are mutable, which means you can change their content without changing their identity. You can modify, add, remove, or reorder items in a list. On the other hand, tuples are immutable, which means you can&#x27;t change them at all once they are created. This immutability makes tuples slightly more efficient to use in Python than lists when you have a constant set of values.</div>
                     </div>
 
                     <div>
@@ -290,14 +359,14 @@ This allows Python to handle other tasks in the meantime, which can significantl
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">Correctness</div>
-                    <div class="text-gray-300 text-xs">0.987</div>
+                    <div class="text-gray-200 font-semibold text-xs">Hallucination</div>
+                    <div class="text-gray-300 text-xs">0.686</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
                     <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response accurately explains that lists are mutable and tuples are immutable, and correctly states the syntax differences (lists use square brackets, tuples use parentheses). No factual errors or omissions are present.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The Actual Output correctly explains the mutability difference between lists and tuples, aligning with the core requirement of the Expected Output. However, it omits the detail about the syntax difference (square brackets for lists, parentheses for tuples) present in the Expected Output, and introduces an extra claim about tuples being more efficient, which is not in the Expected Output. Thus, while the main requirement is addressed, there are minor shortcomings in completeness and adherence.</div>
             </div>
             
                         </div>
@@ -328,8 +397,8 @@ This allows Python to handle other tasks in the meantime, which can significantl
                 
         <div class="bg-[#1e1a2e] border border-[#3d2f6a]/40 rounded-md p-3 text-center">
             <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#a855f7"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Correctness</div>
-            <div class="text-lg font-bold text-white mt-1">0.94</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Hallucination</div>
+            <div class="text-lg font-bold text-white mt-1">0.45</div>
         </div>
         
             </div>
@@ -345,7 +414,7 @@ This allows Python to handle other tasks in the meantime, which can significantl
             data: {
                 labels: ['Passed', 'Failed'],
                 datasets: [{
-                    data: [3, 0],
+                    data: [2, 2],
                     backgroundColor: ['#10b981', '#f43f5e'],
                     borderWidth: 0,
                     cutout: '88%'
@@ -363,11 +432,11 @@ This allows Python to handle other tasks in the meantime, which can significantl
         new Chart(barCtx, {
             type: 'line',
             data: {
-                labels: ["What is Python?", "How does async/...", "What is the dif..."],
+                labels: ["What is Python?", "How does async/...", "What is the dif...", ""],
                 datasets: [
                     {
-                label: "Correctness",
-                data: [0.9804215434031507, 0.8460924818997044, 0.9865224072151173],
+                label: "Hallucination",
+                data: [0.19263037379231737, 0.727512973571033, 0.685585115064397, 0.2055868218375098],
                 backgroundColor: "#a855f733",
                 borderColor: "#a855f7",
                 borderWidth: 2.5,

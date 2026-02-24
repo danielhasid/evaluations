@@ -60,10 +60,17 @@ def load_golden_set_csv(filepath):
             raise ValueError(f"CSV must contain columns: {required_columns}. Found: {reader.fieldnames}")
 
         for row in reader:
+            raw_context = (row.get('context') or '').strip()
+            try:
+                context = json.loads(raw_context) if raw_context else []
+            except json.JSONDecodeError:
+                context = [raw_context] if raw_context else []
+
             qa_pair = {
                 'question': row['question'].strip(),
                 'expected_answer': row['expected_answer'].strip(),
-                'metadata': row.get('metadata', '').strip() if 'metadata' in row else ''
+                'context': context,
+                'metadata': (row.get('metadata') or '').strip()
             }
             qa_pairs.append(qa_pair)
 
@@ -112,7 +119,8 @@ def run_batch_evaluation(qa_pairs):
         test_case = LLMTestCase(
             input=qa_pair['question'],
             actual_output=qa_pair['generated_answer'],
-            expected_output=qa_pair['expected_answer']
+            expected_output=qa_pair['expected_answer'],
+            context=qa_pair['context'] if qa_pair.get('context') else None
         )
         test_cases.append(test_case)
 
@@ -121,14 +129,16 @@ def run_batch_evaluation(qa_pairs):
         name="Fluency",
         criteria="Is the output grammatically correct and easy to understand?",
         evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-        threshold = 0.5
+        threshold=0.5
     )
-
-    coherence = GEval(
-        name="Coherence",
-        criteria="Is the output logically structured and cohesive?",
-        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-        threshold = 0.5
+    faithfulness = GEval(
+        name="Faithfulness",
+        criteria="Is the output grounded in the provided context?",
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.CONTEXT  # Essential here
+        ]
     )
 
     relevance = GEval(
@@ -160,8 +170,19 @@ def run_batch_evaluation(qa_pairs):
         threshold=0.5
     )
 
-    # metrics = [fluency, coherence, relevance, correctness]
-    metrics = [correctness]
+    hallucination = GEval(
+        name="Hallucination",
+        criteria="Does the output match the expected output without adding false claims?",
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.EXPECTED_OUTPUT
+        ],
+        threshold=0.5
+    )
+
+    metrics = [fluency, faithfulness, relevance, correctness, hallucination]
+    # metrics = [hallucination]
 
     # Run DeepEval (fixed: removed skip_on_missing_params parameter)
     print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")
@@ -216,15 +237,15 @@ def display_results(qa_pairs, test_cases):
                     reason = metric_data.get('reason', '')
                     passed = metric_data.get('passed', None)
                     threshold = metric_data.get('threshold', None)
-                    
+
                     status_indicator = ''
                     if passed is not None:
                         status_indicator = ' ✅' if passed else ' ❌'
-                    
+
                     score_text = f"{score:.4f}" if isinstance(score, float) else str(score)
                     threshold_text = f" (threshold: {threshold})" if threshold is not None else ""
                     print(f"  {metric_name}: {score_text}{threshold_text}{status_indicator}")
-                    
+
                     if reason:
                         print(f"    Reason: {reason}")
                 else:
@@ -286,7 +307,7 @@ def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filep
                 if hasattr(metric, 'score') and metric.score is not None:
                     # Get metric name
                     metric_name = getattr(metric, 'name', metric.__class__.__name__)
-                    
+
                     # Get threshold for this metric
                     threshold = getattr(metric, 'threshold', 0.5)
                     passed = metric.score >= threshold
@@ -303,7 +324,8 @@ def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filep
                     if not passed:
                         all_passed = False
 
-                    print(f"  Test case {i + 1}, {metric_name}: {metric.score:.4f} (threshold: {threshold}) - {'✅ PASS' if passed else '❌ FAIL'}")
+                    print(
+                        f"  Test case {i + 1}, {metric_name}: {metric.score:.4f} (threshold: {threshold}) - {'✅ PASS' if passed else '❌ FAIL'}")
                     if hasattr(metric, 'reason') and metric.reason:
                         reason_preview = metric.reason[:100] + "..." if len(metric.reason) > 100 else metric.reason
                         print(f"    Reason: {reason_preview}")
