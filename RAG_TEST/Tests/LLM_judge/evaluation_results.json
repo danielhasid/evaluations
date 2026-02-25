@@ -1,14 +1,38 @@
 [
   {
     "question": "What is Python?",
-    "generated_answer": "Python is a high-level, interpreted programming language known for its simplicity and readability. It supports multiple programming paradigms such as procedural, object-oriented, and functional programming. Python is widely used for web development, data analysis, artificial intelligence, scientific computing, and more.",
+    "generated_answer": "Python is a high-level, interpreted programming language. It was created by Guido van Rossum and first released in 1991. Python is designed to be readable and it has clear, simple syntax. It is widely used for web development, data analysis, artificial intelligence, scientific computing, and more. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming.",
     "expected_answer": "Python is cool",
     "metadata": "basic_knowledge",
-    "timestamp": "2026-02-24T22:27:17.058193",
+    "timestamp": "2026-02-25T13:11:42.602934",
     "evaluation_metrics": {
+      "Fluency": {
+        "score": 1.0,
+        "reason": "The response is grammatically correct, clear, and provides a comprehensive answer to the question 'What is Python?'. It includes key details such as Python being high-level, interpreted, its creator, release date, design philosophy, common uses, and supported paradigms. The output aligns strongly with the evaluation steps and fully meets the expectations set by the input.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Faithfulness": {
+        "score": 0.14372149817449112,
+        "reason": "The output provides a detailed and accurate description of Python, but the Context only contains the phrase 'oython is greate' and does not support or provide the information given in the output. The response introduces substantial information not present in the Context, only aligning with the positive sentiment about Python. Thus, it omits critical adherence to the Context and introduces unsupported details.",
+        "threshold": 0.5,
+        "passed": false
+      },
+      "Relevance": {
+        "score": 1.0,
+        "reason": "The output directly and thoroughly answers the question by defining Python, mentioning its creator and release date, describing its design philosophy, listing common use cases, and noting its support for multiple programming paradigms. The response is relevant, complete, and free of unnecessary information, fully satisfying the requirements.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Correctness": {
+        "score": 0.0014503579997548872,
+        "reason": "The actual output is missing; there is no response to evaluate. This is a significant omission of detail as required by the expected output.",
+        "threshold": 0.5,
+        "passed": false
+      },
       "Hallucination": {
-        "score": 0.19263037379231737,
-        "reason": "The Actual Output does not match the Expected Output, which is simply 'Python is cool'. The Actual Output provides additional information about Python's features and uses, which is not present in the Expected Output. This violates steps 1 and 2, though it does address the general topic from the Input.",
+        "score": 0.18933094124452288,
+        "reason": "The Actual Output does not match the Expected Output, which is simply 'Python is cool.' The Actual Output provides additional information and details not present in the Expected Output, violating the requirement to avoid extra claims. While it does address the input question, it fails to align with the expected brevity and content.",
         "threshold": 0.5,
         "passed": false
       }
@@ -17,14 +41,38 @@
   },
   {
     "question": "How does async/await work in Python?",
-    "generated_answer": "Async/await in Python is a method of handling asynchronous operations, which allows for concurrent execution of tasks without the need for multi-threading or multi-processing. 'async' is a keyword used to define a coroutine function, which is a special kind of function designed to be used with asynchronous operations. 'await' is used inside the coroutine function to suspend the execution of the function until the awaited task is complete. This allows other tasks to run during the waiting period, improving the efficiency of the program.",
+    "generated_answer": "Async/await in Python is a technique for writing concurrent code using the async/await syntax. It is part of the asyncio library in Python which is used for writing single-threaded concurrent code using coroutines, multiplexing I/O access over sockets and other resources, running network clients and servers, and other related primitives.\n\nThe \"async\" keyword before a function defines it as a \"coroutine\" function, which means it can be paused and resumed, allowing other code to run during the pauses. It's a special kind of function which is able to \"yield\" control, generally back to an event loop.\n\nThe \"await\" keyword is used in an async function to wait for the result of another coroutine function or task. It essentially signifies where a program will give control back to the event loop, which can then execute other code before resuming this function.\n\nAsync/await allows for concurrent execution of code, which can lead to significant performance improvements in I/O bound programs. However, it doesn't run tasks in parallel and doesn't provide any speed improvements for CPU-bound tasks.",
     "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
     "metadata": "advanced_concepts",
-    "timestamp": "2026-02-24T22:27:17.058193",
+    "timestamp": "2026-02-25T13:11:42.602934",
     "evaluation_metrics": {
+      "Fluency": {
+        "score": 0.9971563965771564,
+        "reason": "The response accurately explains how async/await works in Python, referencing the asyncio library, coroutines, the event loop, and the distinction between I/O-bound and CPU-bound tasks. The explanation is clear, well-structured, and free from grammatical errors. It meets the expectations set by the input by providing both a conceptual overview and practical implications.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Faithfulness": {
+        "score": 0.9300745591475961,
+        "reason": "The output accurately explains how async/await works in Python, aligning well with the context by describing the async keyword for coroutines, the await keyword yielding control to the event loop, and the benefit for I/O-bound concurrency. It adds some extra details about the asyncio library and limitations for CPU-bound tasks, which are not in the context but do not detract from the core explanation. All critical details from the context are present and correctly described.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Relevance": {
+        "score": 1.0,
+        "reason": "The response directly and thoroughly explains how async/await works in Python, covering the syntax, the role of coroutines, the event loop, and the distinction between I/O-bound and CPU-bound tasks. It is clear, relevant, and does not include unnecessary information, fully satisfying the requirements of the input question.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Correctness": {
+        "score": 0.8007380261731394,
+        "reason": "The response correctly explains that async/await is a pattern for asynchronous code in Python, describes the use of 'async' to define a coroutine, and 'await' to pause execution until completion. However, it omits the detail that 'await' allows other tasks to run concurrently, which is a key aspect of the pattern.",
+        "threshold": 0.5,
+        "passed": true
+      },
       "Hallucination": {
-        "score": 0.727512973571033,
-        "reason": "The Actual Output covers the main points from the Expected Output, explaining that 'async' defines a coroutine and 'await' pauses execution to allow concurrency. It adds some extra context about not needing multi-threading or multi-processing and describes efficiency improvements, which are not present in the Expected Output. The explanation is accurate and addresses the input, but the inclusion of additional information slightly reduces alignment with the evaluation steps.",
+        "score": 0.6008925934277822,
+        "reason": "The Actual Output provides a correct and detailed explanation of async/await in Python, covering the use of 'async' and 'await', coroutines, and concurrency, which aligns with the Expected Output. However, it introduces additional information not present in the Expected Output, such as references to the asyncio library, event loops, I/O multiplexing, and performance considerations. This extra detail, while accurate, exceeds the scope of the Expected Output and does not match it exactly.",
         "threshold": 0.5,
         "passed": true
       }
@@ -33,34 +81,42 @@
   },
   {
     "question": "What is the difference between a list and a tuple?",
-    "generated_answer": "A list and a tuple are both types of data structures in Python that can store multiple items. The main difference between them is that lists are mutable, which means you can change their content without changing their identity. You can modify, add, remove, or reorder items in a list. On the other hand, tuples are immutable, which means you can't change them at all once they are created. This immutability makes tuples slightly more efficient to use in Python than lists when you have a constant set of values.",
+    "generated_answer": "A list is mutable, meaning you can change its content without changing its identity. You can modify, add, remove, or rearrange items in a list after it has been created. A tuple, on the other hand, is immutable, meaning you can't change it at all after it's been created. This immutability can be useful when you need a constant set of values and you want to ensure they do not get changed accidentally.",
     "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
     "metadata": "data_structures",
-    "timestamp": "2026-02-24T22:27:17.058193",
+    "timestamp": "2026-02-25T13:11:42.602934",
     "evaluation_metrics": {
+      "Fluency": {
+        "score": 1.0,
+        "reason": "The response clearly and accurately explains the difference between a list and a tuple, focusing on mutability versus immutability. The explanation is free from grammatical errors, easy to understand, and directly addresses the input question. It also provides additional context about when immutability can be useful, enhancing clarity and completeness.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Faithfulness": {
+        "score": 0.7890294229760536,
+        "reason": "The output correctly explains the main difference between lists and tuples, focusing on mutability and immutability, which aligns with the key facts in the context. It also mentions practical implications of immutability. However, it omits details from the context such as the syntax differences (square brackets for lists, parentheses for tuples) and the fact that tuples are hashable and can be used as dictionary keys. No incorrect information is introduced.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Relevance": {
+        "score": 1.0,
+        "reason": "The response directly addresses the question by clearly explaining the main difference between a list and a tuple—mutability versus immutability. It provides relevant details about how lists can be modified and tuples cannot, and briefly mentions a use case for tuples. The answer is concise, focused, and fully satisfies the requirements of the input question without unnecessary information.",
+        "threshold": 0.5,
+        "passed": true
+      },
+      "Correctness": {
+        "score": 1.0,
+        "reason": "The response accurately states that lists are mutable and tuples are immutable, and correctly identifies the use of square brackets for lists and parentheses for tuples. No factual errors or omissions are present.",
+        "threshold": 0.5,
+        "passed": true
+      },
       "Hallucination": {
-        "score": 0.685585115064397,
-        "reason": "The Actual Output correctly explains the mutability difference between lists and tuples, aligning with the core requirement of the Expected Output. However, it omits the detail about the syntax difference (square brackets for lists, parentheses for tuples) present in the Expected Output, and introduces an extra claim about tuples being more efficient, which is not in the Expected Output. Thus, while the main requirement is addressed, there are minor shortcomings in completeness and adherence.",
+        "score": 0.6817574482861011,
+        "reason": "The Actual Output correctly explains the main difference between lists and tuples, focusing on mutability versus immutability, which aligns with the Expected Output. However, it omits the detail about the syntax difference (square brackets for lists and parentheses for tuples) that is present in the Expected Output. The Actual Output does not introduce any extraneous information, but it is missing a key detail required by the Expected Output.",
         "threshold": 0.5,
         "passed": true
       }
     },
     "status": "pass"
-  },
-  {
-    "question": "",
-    "generated_answer": "You didn't provide a question. Could you please ask something specific?",
-    "expected_answer": "",
-    "metadata": "",
-    "timestamp": "2026-02-24T22:27:17.058193",
-    "evaluation_metrics": {
-      "Hallucination": {
-        "score": 0.2055868218375098,
-        "reason": "The actual output does not match the expected output, which is empty. The actual output introduces new information by prompting the user to ask a question, which is not present in the expected output. While it acknowledges the lack of input, it does not strictly adhere to the requirement of matching the expected output exactly.",
-        "threshold": 0.5,
-        "passed": false
-      }
-    },
-    "status": "failed"
   }
 ]
