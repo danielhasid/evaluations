@@ -6,7 +6,6 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Ignore environment files
-.env
 venv/
 
 # Ignore system files
