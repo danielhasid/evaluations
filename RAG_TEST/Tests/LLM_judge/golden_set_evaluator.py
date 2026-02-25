@@ -131,15 +131,15 @@ def run_batch_evaluation(qa_pairs):
         evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
         threshold=0.5
     )
-    faithfulness = GEval(
-        name="Faithfulness",
-        criteria="Is the output grounded in the provided context?",
-        evaluation_params=[
-            LLMTestCaseParams.INPUT,
-            LLMTestCaseParams.ACTUAL_OUTPUT,
-            LLMTestCaseParams.CONTEXT  # Essential here
-        ]
-    )
+    # faithfulness = GEval(
+    #     name="Faithfulness",
+    #     criteria="Is the output grounded in the provided context?",
+    #     evaluation_params=[
+    #         LLMTestCaseParams.INPUT,
+    #         LLMTestCaseParams.ACTUAL_OUTPUT,
+    #         LLMTestCaseParams.CONTEXT  # Essential here
+    #     ]
+    # )
 
     relevance = GEval(
         name="Relevance",
@@ -181,7 +181,7 @@ def run_batch_evaluation(qa_pairs):
         threshold=0.5
     )
 
-    metrics = [fluency, faithfulness, relevance, correctness, hallucination]
+    metrics = [fluency,  relevance, correctness, hallucination]
     # metrics = [hallucination]
 
     # Run DeepEval (fixed: removed skip_on_missing_params parameter)

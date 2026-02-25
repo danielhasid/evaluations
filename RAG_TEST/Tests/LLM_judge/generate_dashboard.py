@@ -401,7 +401,7 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
             f'                backgroundColor: {json.dumps(color + "33")},',
             f'                borderColor: {json.dumps(color)},',
             '                borderWidth: 2.5,',
-            f'                borderDash: {dash},',
+            '                borderDash: [],',
             '                tension: 0.4,',
             '                pointRadius: 5,',
             '                pointHoverRadius: 8,',
