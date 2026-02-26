@@ -8,11 +8,15 @@ load_dotenv()
 
 # --- OpenAI setup ---
 api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set.")
 
 def generate_evaluation_summary(json_file_path, api_key):
     # 1. Load the evaluation results
     with open(json_file_path, 'r', encoding='utf-8') as f:
-        eval_data = json.load(f)
+        raw = json.load(f)
+
+    eval_data = raw['results'] if isinstance(raw, dict) else raw
 
     # 2. Filter and prepare the data
     summary_data = []
@@ -74,7 +78,24 @@ def generate_evaluation_summary(json_file_path, api_key):
     return response.choices[0].message.content
 
 
+def save_summary_to_json(json_file_path, summary_text):
+    with open(json_file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    if isinstance(data, list):
+        data = {'results': data, 'analysis_summary': None}
+
+    data['analysis_summary'] = summary_text
+
+    with open(json_file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    print(f"\n💾 Analysis summary saved to: {json_file_path}")
+
+
 # Run the function
 if __name__ == "__main__":
-    report = generate_evaluation_summary("evaluation_results.json", api_key)
+    json_path = "evaluation_results.json"
+    report = generate_evaluation_summary(json_path, api_key)
     print(report)
+    save_summary_to_json(json_path, report)

@@ -83,7 +83,7 @@ During metric extraction, you'll see:
 
 Run the script as before:
 ```bash
-python golden_set_evaluator.py
+python golden_set_geval_metrix.py
 ```
 
 The script will:

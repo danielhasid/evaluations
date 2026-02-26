@@ -33,8 +33,7 @@ venv.bak/
 
 # Environment variables
 
-.env.local
-.env.*.local
+.env
 
 # IDE
 .vscode/

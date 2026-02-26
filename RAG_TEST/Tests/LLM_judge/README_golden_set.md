@@ -47,7 +47,7 @@ OPENAI_API_KEY=your-api-key-here
 3. Run the script:
 
 ```bash
-python golden_set_evaluator.py
+python golden_set_geval_metrix.py
 ```
 
 ## Output

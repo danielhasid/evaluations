@@ -1,6 +1,78 @@
 import json
 import html
+import re
 from statistics import mean
+
+
+def _render_summary_html(text: str) -> str:
+    """Convert the GPT-4o markdown analysis report into clean, professional HTML."""
+    if not text:
+        return ""
+
+    lines = text.splitlines()
+    out = []
+    in_list = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Strip leading markdown heading markers (###, ##, #)
+        stripped = re.sub(r'^#{1,6}\s*', '', stripped)
+
+        # Strip **bold** markers
+        stripped = re.sub(r'\*\*(.+?)\*\*', r'\1', stripped)
+
+        # Strip remaining lone * or _
+        stripped = re.sub(r'[*_]', '', stripped)
+
+        if not stripped:
+            if in_list:
+                out.append('</ul>')
+                in_list = False
+            out.append('<div class="mb-3"></div>')
+            continue
+
+        # Numbered section heading: e.g. "1. Overall Score & Status"
+        section_match = re.match(r'^(\d+)\.\s+(.+)$', stripped)
+        if section_match and len(stripped) < 80:
+            if in_list:
+                out.append('</ul>')
+                in_list = False
+            num = section_match.group(1)
+            title = html.escape(section_match.group(2))
+            out.append(
+                f'<div class="flex items-center gap-2 mt-6 mb-3">'
+                f'<span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 '
+                f'text-xs font-bold flex items-center justify-center border border-violet-500/30">{num}</span>'
+                f'<h4 class="text-gray-100 font-semibold text-sm tracking-wide">{title}</h4>'
+                f'</div>'
+            )
+            continue
+
+        # Bullet point: starts with "- " or "* "
+        bullet_match = re.match(r'^[-*]\s+(.+)$', stripped)
+        if bullet_match:
+            if not in_list:
+                out.append('<ul class="space-y-1.5 ml-4">')
+                in_list = True
+            content = html.escape(bullet_match.group(1))
+            out.append(
+                f'<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed">'
+                f'<span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span>'
+                f'<span>{content}</span></li>'
+            )
+            continue
+
+        # Plain paragraph line
+        if in_list:
+            out.append('</ul>')
+            in_list = False
+        out.append(f'<p class="text-gray-300 text-sm leading-relaxed">{html.escape(stripped)}</p>')
+
+    if in_list:
+        out.append('</ul>')
+
+    return '\n'.join(out)
 
 
 def _as_list(data):
@@ -127,7 +199,7 @@ CARD_STYLES = [
 ]
 
 
-def create_full_dark_dashboard(json_filepath, html_filepath):
+def create_dashboard(json_filepath, html_filepath):
     # 1) Load JSON
     try:
         with open(json_filepath, "r", encoding="utf-8") as f:
@@ -143,6 +215,11 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
     if not data:
         print("Error: JSON did not contain a list of evaluation items.")
         return
+
+    analysis_summary = raw.get("analysis_summary") if isinstance(raw, dict) else None
+    evaluator_type = raw.get("evaluator_type", "Unknown") if isinstance(raw, dict) else "Unknown"
+    evaluator_color = "#10b981" if evaluator_type == "RAG" else "#a855f7" if evaluator_type == "GEval" else "#6b7280"
+    evaluator_bg = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" if evaluator_type == "RAG" else "bg-violet-500/10 border-violet-500/30 text-violet-400" if evaluator_type == "GEval" else "bg-gray-500/10 border-gray-500/30 text-gray-400"
 
     # 2) Discover ALL metrics across ALL rows
     all_metric_norm_set = set()
@@ -428,6 +505,25 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
         </div>
         """
 
+    # Variables pre-computed to avoid f-string nesting/literal issues
+    gpt4o_label = "GPT-4o Analysis Report"
+    analysis_summary_block = ""
+    if analysis_summary:
+        analysis_summary_block = f"""
+        <div class="glass-panel p-6">
+            <div class="flex items-center gap-3 pb-4 mb-2 border-b border-gray-800/60">
+                <svg class="w-4 h-4 text-violet-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <h3 class="text-gray-100 font-semibold text-sm tracking-wide">{gpt4o_label}</h3>
+                <span class="ml-auto px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">AI Generated</span>
+            </div>
+            <div class="mt-4">
+                {_render_summary_html(analysis_summary)}
+            </div>
+        </div>"""
+
     # ── HTML template ────────────────────────────────────────────────────────
     html_template = f"""<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -484,6 +580,16 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                     {avg_model_score:.2f}
                 </div>
             </div>
+            <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
+                <span class="text-gray-400 text-sm font-medium">Evaluation Mode</span>
+                <div class="mt-2 flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border {evaluator_bg}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {evaluator_type}
+                    </span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1.5">{"RAG Metrics (Faithfulness, Precision, Recall, Relevancy)" if evaluator_type == "RAG" else "GEval Custom Criteria" if evaluator_type == "GEval" else "Unknown evaluator"}</div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
@@ -529,7 +635,7 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
         </div>
 
         <!-- Bar Chart + Summary Cards -->
-        <div class="glass-panel p-6">
+        <div class="glass-panel p-6 mb-6">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-4">
                     <h3 class="text-gray-200 font-medium text-sm">Production LLM Output Quality</h3>
@@ -544,6 +650,9 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
                 {summary_cards_html}
             </div>
         </div>
+
+        <!-- Analysis Summary -->
+        {analysis_summary_block}
 
     </main>
 
@@ -628,8 +737,8 @@ def create_full_dark_dashboard(json_filepath, html_filepath):
     with open(html_filepath, "w", encoding="utf-8") as f:
         f.write(html_template)
 
-    print(f"✅ Dashboard generated successfully at: {html_filepath}")
+    print(f"Dashboard generated successfully at: {html_filepath}")
 
 
 if __name__ == "__main__":
-    create_full_dark_dashboard("evaluation_results.json", "confident_ai_dashboard.html")
+    create_dashboard("evaluation_results.json", "confident_ai_dashboard.html")

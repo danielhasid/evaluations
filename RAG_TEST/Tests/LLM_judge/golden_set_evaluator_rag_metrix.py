@@ -3,7 +3,6 @@ import csv
 import json
 from datetime import datetime
 import openai
-from deepeval import evaluate
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.metrics import (
     AnswerRelevancyMetric,
@@ -110,36 +109,52 @@ def generate_answers_for_dataset(qa_pairs):
     return qa_pairs
 
 
+RAG_METRIC_KEYS = [
+    "answer_relevancy",
+    "faithfulness",
+    "contextual_precision",
+    "contextual_recall",
+    "contextual_relevancy",
+]
+
+
 # --- DeepEval Evaluation ---
-def run_batch_evaluation(qa_pairs):
+def run_batch_evaluation(qa_pairs, selected_metrics: list):
     """
     Evaluate all Q&A pairs using DeepEval RAG metrics.
-    Creates test cases and runs RAG-specific metrics: AnswerRelevancy, Faithfulness,
-    ContextualPrecision, ContextualRecall, and ContextualRelevancy.
-    Returns both test_cases and metrics for accessing scores.
+    Creates test cases and runs only the caller-specified metrics.
+
+    Args:
+        qa_pairs: List of Q&A pair dicts with generated answers.
+        selected_metrics: Required list of metric keys to run.
+                          Valid keys: answer_relevancy, faithfulness,
+                          contextual_precision, contextual_recall, contextual_relevancy
 
     Common combinations:
-        If you only care about the LLM's response quality:
-            metrics = [answer_relevancy, faithfulness]
-            # Needs: input, actual_output, retrieval_context
+        Response quality only:   ["answer_relevancy", "faithfulness"]
+        Retrieval quality only:  ["contextual_precision", "contextual_recall", "contextual_relevancy"]
+        End-to-end RAG:          all five keys
 
-        If you only care about your retriever/RAG pipeline quality:
-            metrics = [contextual_precision, contextual_recall, contextual_relevancy]
-            # Needs: input, expected_output, retrieval_context
+    Returns:
+        (test_cases, metrics) tuple.
 
-        If you want end-to-end RAG evaluation:
-            metrics = [answer_relevancy, faithfulness, contextual_precision, contextual_recall, contextual_relevancy]
-            # Needs: input, actual_output, expected_output, retrieval_context
-
-    General guidance:
-        - Minimal viable QA eval      → answer_relevancy + faithfulness (most common starting point)
-        - Focus on retrieval          → contextual_relevancy + contextual_recall
-        - Have ground truth?          → add contextual_precision + contextual_recall
-        - No ground truth?            → skip contextual_precision and contextual_recall
-                                        since both require expected_output
+    Raises:
+        ValueError: If selected_metrics is empty or contains unknown keys.
     """
-    test_cases = []
+    if not selected_metrics:
+        raise ValueError(
+            f"You must specify which RAG metrics to run. "
+            f"Valid options: {RAG_METRIC_KEYS}"
+        )
 
+    invalid = [k for k in selected_metrics if k not in RAG_METRIC_KEYS]
+    if invalid:
+        raise ValueError(
+            f"Unknown RAG metrics: {invalid}. "
+            f"Valid options: {RAG_METRIC_KEYS}"
+        )
+
+    test_cases = []
     for qa_pair in qa_pairs:
         test_case = LLMTestCase(
             input=qa_pair['question'],
@@ -150,7 +165,7 @@ def run_batch_evaluation(qa_pairs):
         )
         test_cases.append(test_case)
 
-    # Define RAG-specific metrics
+    # Build all available RAG metric objects
     # Note: Using gpt-4o instead of gpt-4 because RAG metrics require structured outputs
     answer_relevancy = AnswerRelevancyMetric(
         threshold=0.7,
@@ -181,20 +196,16 @@ def run_batch_evaluation(qa_pairs):
         model="gpt-4o"
     )
 
-    metrics = [
-        answer_relevancy,
-        faithfulness,
-        contextual_precision,
-        contextual_recall,
-        contextual_relevancy
-    ]
+    all_metrics = {
+        "answer_relevancy": answer_relevancy,
+        "faithfulness": faithfulness,
+        "contextual_precision": contextual_precision,
+        "contextual_recall": contextual_recall,
+        "contextual_relevancy": contextual_relevancy,
+    }
 
-    # Run DeepEval (fixed: removed skip_on_missing_params parameter)
-    print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")
-    evaluate(
-        test_cases=test_cases,
-        metrics=metrics
-    )
+    metrics = [all_metrics[k] for k in selected_metrics]
+    print(f"📐 Running RAG metrics: {selected_metrics}")
 
     return test_cases, metrics
 
@@ -212,7 +223,8 @@ def display_results(qa_pairs, test_cases):
     # Load the results from JSON to get the metrics with reasons
     try:
         with open("evaluation_results.json", 'r', encoding='utf-8') as f:
-            results = json.load(f)
+            data = json.load(f)
+        results = data['results']
     except FileNotFoundError:
         results = []
 
@@ -280,29 +292,34 @@ def save_initial_results(qa_pairs, output_filepath="evaluation_results.json"):
         }
         results.append(result)
 
+    data = {
+        'evaluator_type': 'RAG',
+        'results': results,
+        'analysis_summary': None
+    }
+
     with open(output_filepath, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
     print(f"\n💾 Initial results saved to: {output_filepath}")
 
 
 def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filepath="evaluation_results.json"):
     """
-    Update the JSON file with evaluation metric scores and reasons after DeepEval completes.
-    Since evaluate() runs metrics in bulk, we measure each test case individually
-    to extract the scores and reasoning properly.
+    Run DeepEval metrics on each test case and update the JSON file with scores and reasons.
+    Each metric is measured individually per test case to extract the score and reason attributes.
     """
     with open(output_filepath, 'r', encoding='utf-8') as f:
-        results = json.load(f)
+        data = json.load(f)
 
-    print("\n📊 Extracting metric scores and reasons...")
+    results = data['results']
+
+    print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")
 
     for i, (result, test_case) in enumerate(zip(results, test_cases)):
         metric_data = {}
         all_passed = True
 
-        # After evaluate() runs, we need to extract scores by measuring each metric
-        # on each test case individually to access the score and reason attributes
         for metric in metrics_list:
             try:
                 # Measure the metric on this specific test case
@@ -340,8 +357,10 @@ def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filep
         result['evaluation_metrics'] = metric_data if metric_data else None
         result['status'] = 'pass' if all_passed and metric_data else 'failed'
 
+    data['results'] = results
+
     with open(output_filepath, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
     print(f"\n💾 Results updated with evaluation metrics and reasons in: {output_filepath}")
 
@@ -360,8 +379,11 @@ def main():
     # STEP 1: Save initial results (without metrics)
     save_initial_results(qa_pairs, OUTPUT_JSON)
 
-    # STEP 2: Run DeepEval evaluation
-    test_cases, metrics = run_batch_evaluation(qa_pairs)
+    # STEP 2: Run DeepEval evaluation (specify which metrics to run)
+    test_cases, metrics = run_batch_evaluation(
+        qa_pairs,
+        selected_metrics=["answer_relevancy", "faithfulness", "contextual_precision", "contextual_recall", "contextual_relevancy"]
+    )
 
     # STEP 3: Update JSON with metrics
     update_results_with_metrics(qa_pairs, test_cases, metrics, OUTPUT_JSON)

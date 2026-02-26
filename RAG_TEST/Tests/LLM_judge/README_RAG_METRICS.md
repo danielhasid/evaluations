@@ -164,7 +164,7 @@ OUTPUT_JSON = "evaluation_results.json"
 - Threshold-based evaluation
 - Mock retrieval contexts for testing without a real RAG system
 
-## Differences from golden_set_evaluator.py
+## Differences from golden_set_geval_metrix.py
 
 1. **RAG-specific metrics** instead of general GEval metrics
 2. **Context fields required** in CSV (retrieval_context and context)
