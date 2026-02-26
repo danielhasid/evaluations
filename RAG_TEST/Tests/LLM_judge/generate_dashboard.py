@@ -540,6 +540,18 @@ def create_dashboard(json_filepath, html_filepath):
         .nav-item {{ padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; border-radius: 0.375rem; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }}
         .nav-item:hover, .nav-item.active {{ background-color: #1f2128; color: #f3f4f6; }}
         .font-mono {{ font-family: 'Courier New', monospace; }}
+        @media print {{
+            aside {{ display: none !important; }}
+            body {{ display: block !important; background: #fff !important; color: #000 !important; overflow: visible !important; height: auto !important; }}
+            main {{ padding: 1rem !important; overflow: visible !important; height: auto !important; }}
+            .glass-panel {{ background: #f9fafb !important; border: 1px solid #e5e7eb !important; box-shadow: none !important; }}
+            .text-gray-400, .text-gray-500 {{ color: #374151 !important; }}
+            .text-gray-300, .text-gray-200 {{ color: #111827 !important; }}
+            .text-white {{ color: #000 !important; }}
+            .no-print {{ display: none !important; }}
+            tr.hidden {{ display: table-row !important; }}
+            @page {{ margin: 1.5cm; size: A4; }}
+        }}
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -561,6 +573,18 @@ def create_dashboard(json_filepath, html_filepath):
     </aside>
 
     <main class="flex-1 p-8 overflow-y-auto bg-[#0b0c10]">
+
+        <div class="flex justify-end mb-4 no-print">
+            <button onclick="window.print()"
+                class="flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 hover:bg-violet-500
+                       text-white text-sm font-medium transition-colors border border-violet-500/50 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Export PDF
+            </button>
+        </div>
 
         <div class="flex gap-4 mb-6">
             <div class="glass-panel p-5 flex-1 flex items-center justify-between">
