@@ -1,7 +1,14 @@
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Support both key names used across DeepEval/Confident AI setups.
+confident_key = os.getenv("CONFIDENT_API_KEY") or os.getenv("DEEPEVAL_API_KEY")
+if confident_key:
+    os.environ.setdefault("CONFIDENT_API_KEY", confident_key)
+    os.environ.setdefault("DEEPEVAL_API_KEY", confident_key)
 
 from golden_set_geval_metrix import (
     load_golden_set_csv as geval_load_csv,
@@ -27,6 +34,12 @@ if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set.")
 
 
+def _make_run_json_path(output_dir: str = ".", prefix: str = "evaluation_results") -> str:
+    """Generate a unique timestamped JSON filename for a single evaluation run."""
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join(output_dir, f"{prefix}_{ts}.json")
+
+
 class EvaluationCenter:
     def __init__(self):
         self.evaluation_metrics = []
@@ -42,13 +55,24 @@ class EvaluationCenter:
         return self.evaluation_metrics
 
     @staticmethod
-    def run_geval_evaluation(input_csv="golden_set.csv", output_json="evaluation_results.json", metrics=None):
+    def run_geval_evaluation(
+        input_csv="golden_set.csv",
+        output_json=None,
+        output_dir=".",
+        metrics=None,
+    ):
         """
         Run the full GEval golden set evaluation pipeline.
 
+        Each run writes a new timestamped JSON file so historical results are
+        preserved. The dashboard is regenerated from all files in output_dir.
+
         Args:
             input_csv: Path to the golden set CSV file.
-            output_json: Path to write evaluation results.
+            output_json: Explicit path for the result JSON. When None (default),
+                         a timestamped filename is auto-generated inside output_dir.
+            output_dir: Directory where per-run JSON files accumulate (default ".").
+                        Also used as the source for the combined dashboard.
             metrics: Optional list of GEval metric keys to run.
                      Valid keys: fluency, relevance, correctness, hallucination
 
@@ -67,6 +91,12 @@ class EvaluationCenter:
                 "You must specify which GEval metrics to run. "
                 "Valid options: fluency, relevance, correctness, hallucination"
             )
+
+        if output_json is None:
+            os.makedirs(output_dir, exist_ok=True)
+            output_json = _make_run_json_path(output_dir, prefix="evaluation_results")
+        else:
+            output_dir = os.path.dirname(os.path.abspath(output_json)) or "."
 
         print("🔹 Loading golden set Q&A pairs from CSV...")
         qa_pairs = geval_load_csv(input_csv)
@@ -100,19 +130,30 @@ class EvaluationCenter:
         print("\n--- Analysis Summary ---")
         print(summary)
 
-        print("\nGenerating HTML dashboard...")
-        create_dashboard(output_json, "confident_ai_dashboard.html")
+        print("\nGenerating HTML dashboard from all runs in directory...")
+        create_dashboard(output_dir, "confident_ai_dashboard.html")
 
         return qa_pairs, test_cases, metrics_list
 
     @staticmethod
-    def run_rag_evaluation(input_csv="golden_set.csv", output_json="evaluation_results.json", metrics=None):
+    def run_rag_evaluation(
+        input_csv="golden_set.csv",
+        output_json=None,
+        output_dir=".",
+        metrics=None,
+    ):
         """
         Run the full RAG metrics evaluation pipeline.
 
+        Each run writes a new timestamped JSON file so historical results are
+        preserved. The dashboard is regenerated from all files in output_dir.
+
         Args:
             input_csv: Path to the golden set CSV file.
-            output_json: Path to write evaluation results.
+            output_json: Explicit path for the result JSON. When None (default),
+                         a timestamped filename is auto-generated inside output_dir.
+            output_dir: Directory where per-run JSON files accumulate (default ".").
+                        Also used as the source for the combined dashboard.
             metrics: Required list of RAG metric keys to run.
                      Valid keys: answer_relevancy, faithfulness,
                      contextual_precision, contextual_recall, contextual_relevancy
@@ -133,6 +174,12 @@ class EvaluationCenter:
                 "Valid options: answer_relevancy, faithfulness, "
                 "contextual_precision, contextual_recall, contextual_relevancy"
             )
+
+        if output_json is None:
+            os.makedirs(output_dir, exist_ok=True)
+            output_json = _make_run_json_path(output_dir, prefix="evaluation_results")
+        else:
+            output_dir = os.path.dirname(os.path.abspath(output_json)) or "."
 
         print("🔹 Loading golden set Q&A pairs from CSV...")
         qa_pairs = rag_load_csv(input_csv)
@@ -155,12 +202,14 @@ class EvaluationCenter:
         print("\n--- Analysis Summary ---")
         print(summary)
 
-        print("\nGenerating HTML dashboard...")
-        create_dashboard(output_json, "confident_ai_dashboard.html")
+        print("\nGenerating HTML dashboard from all runs in directory...")
+        create_dashboard(output_dir, "confident_ai_dashboard.html")
 
         return qa_pairs, test_cases, metrics_list
 
 
 if __name__ == "__main__":
     center = EvaluationCenter()
-    center.run_geval_evaluation(metrics=["fluency", "correctness"])
+    # center.run_geval_evaluation(metrics=["fluency"])
+
+    center.run_rag_evaluation(metrics=["answer_relevancy", "faithfulness"])
