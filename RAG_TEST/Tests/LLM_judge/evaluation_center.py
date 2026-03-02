@@ -22,7 +22,6 @@ from golden_set_evaluator_rag_metrix import (
 from analyze_eval import generate_evaluation_summary, save_summary_to_json
 from generate_dashboard import create_dashboard
 
-print("DEBUG OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY")[:10])
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set.")
