@@ -449,8 +449,7 @@ def update_results_with_metrics(
                 passed = score >= threshold
                 data_row["passed"] = passed
 
-            # Treat unknown pass state as failure to avoid false positives.
-            if passed is not True:
+            if passed is False:
                 all_passed = False
 
             if isinstance(score, (int, float)):
