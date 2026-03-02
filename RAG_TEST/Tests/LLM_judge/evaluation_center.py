@@ -22,6 +22,7 @@ from golden_set_evaluator_rag_metrix import (
 from analyze_eval import generate_evaluation_summary, save_summary_to_json
 from generate_dashboard import create_dashboard
 
+print("DEBUG OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY")[:10])
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set.")
@@ -49,7 +50,7 @@ class EvaluationCenter:
         Args:
             input_csv: Path to the golden set CSV file.
             output_json: Path to write evaluation results.
-            metrics: Required list of GEval metric keys to run.
+            metrics: Optional list of GEval metric keys to run.
                      Valid keys: fluency, relevance, correctness, hallucination
 
         Examples:
@@ -59,6 +60,9 @@ class EvaluationCenter:
             # Run a subset
             center.run_geval_evaluation(metrics=["fluency", "correctness"])
         """
+        if metrics is None:
+            metrics = ["fluency", "relevance", "correctness", "hallucination"]
+            print(f"ℹ️ No GEval metrics specified; using defaults: {metrics}")
         if not metrics:
             raise ValueError(
                 "You must specify which GEval metrics to run. "
@@ -72,9 +76,20 @@ class EvaluationCenter:
 
         geval_save_initial(qa_pairs, output_json)
 
-        test_cases, metrics_list = geval_run_batch(qa_pairs, selected_metrics=metrics)
+        batch_result = geval_run_batch(qa_pairs, selected_metrics=metrics)
+        if len(batch_result) == 3:
+            test_cases, metrics_list, evaluation_result = batch_result
+        else:
+            test_cases, metrics_list = batch_result
+            evaluation_result = None
 
-        geval_update_metrics(qa_pairs, test_cases, metrics_list, output_json)
+        geval_update_metrics(
+            qa_pairs,
+            test_cases,
+            metrics_list,
+            evaluation_result=evaluation_result,
+            output_filepath=output_json,
+        )
 
         geval_display(qa_pairs, test_cases)
 
@@ -147,13 +162,6 @@ class EvaluationCenter:
         return qa_pairs, test_cases, metrics_list
 
 
-center = EvaluationCenter()
-# center.run_rag_evaluation(metrics=[
-#     "answer_relevancy",
-#     "faithfulness",
-#     "contextual_precision",
-#     "contextual_recall",
-#     "contextual_relevancy",
-# ])
-
-center.run_rag_evaluation(metrics=["contextual_precision"])
+if __name__ == "__main__":
+    center = EvaluationCenter()
+    center.run_geval_evaluation(metrics=["fluency", "correctness"])

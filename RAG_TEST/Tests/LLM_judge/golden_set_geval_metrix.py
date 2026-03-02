@@ -3,6 +3,8 @@ import csv
 import json
 from datetime import datetime
 import openai
+from deepeval import evaluate
+from deepeval.dataset import EvaluationDataset
 from deepeval.metrics.g_eval import Rubric
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.metrics import GEval
@@ -108,6 +110,91 @@ def generate_answers_for_dataset(qa_pairs):
 GEVAL_METRIC_KEYS = ["fluency", "relevance", "correctness", "hallucination"]
 
 
+def _build_evaluation_dataset(test_cases):
+    """
+    Build EvaluationDataset in a version-compatible way.
+    Some DeepEval versions accept test_cases in __init__, others require add_* methods.
+    """
+    try:
+        return EvaluationDataset(test_cases=test_cases)
+    except TypeError:
+        dataset = EvaluationDataset()
+        if hasattr(dataset, "add_test_cases"):
+            dataset.add_test_cases(test_cases)
+            return dataset
+        if hasattr(dataset, "add_test_case"):
+            for tc in test_cases:
+                dataset.add_test_case(tc)
+            return dataset
+        if hasattr(dataset, "test_cases"):
+            existing = getattr(dataset, "test_cases")
+            if isinstance(existing, list):
+                existing.extend(test_cases)
+            else:
+                setattr(dataset, "test_cases", test_cases)
+            return dataset
+        raise TypeError(
+            "Unsupported DeepEval EvaluationDataset API. "
+            "Could not attach test cases to dataset."
+        )
+
+
+def _extract_results_from_evaluate(evaluation_result):
+    """
+    Best-effort extraction of per-test, per-metric data from DeepEval evaluate().
+    Returns: list[dict[str, dict]] aligned by test case index.
+    """
+    extracted = []
+    if evaluation_result is None:
+        return extracted
+
+    test_results = getattr(evaluation_result, "test_results", None)
+    if test_results is None and isinstance(evaluation_result, dict):
+        test_results = evaluation_result.get("test_results")
+    if test_results is None:
+        return extracted
+
+    for test_result in test_results:
+        row_metrics = {}
+        metrics_data = getattr(test_result, "metrics_data", None)
+        if metrics_data is None and isinstance(test_result, dict):
+            metrics_data = test_result.get("metrics_data")
+
+        if not metrics_data:
+            extracted.append(row_metrics)
+            continue
+
+        for md in metrics_data:
+            if isinstance(md, dict):
+                metric_name = md.get("name") or md.get("metric")
+                score = md.get("score")
+                reason = md.get("reason")
+                threshold = md.get("threshold")
+                passed = md.get("success")
+                if passed is None:
+                    passed = md.get("passed")
+            else:
+                metric_name = getattr(md, "name", None) or getattr(md, "metric", None)
+                score = getattr(md, "score", None)
+                reason = getattr(md, "reason", None)
+                threshold = getattr(md, "threshold", None)
+                passed = getattr(md, "success", None)
+                if passed is None:
+                    passed = getattr(md, "passed", None)
+
+            if metric_name:
+                row_metrics[metric_name] = {
+                    "score": score,
+                    "reason": reason,
+                    "threshold": threshold,
+                    "passed": passed,
+                }
+
+        extracted.append(row_metrics)
+
+    return extracted
+
+
 # --- DeepEval Evaluation ---
 def run_batch_evaluation(qa_pairs, selected_metrics: list):
     """
@@ -120,7 +207,7 @@ def run_batch_evaluation(qa_pairs, selected_metrics: list):
                           Valid keys: fluency, relevance, correctness, hallucination
 
     Returns:
-        (test_cases, metrics) tuple.
+        (test_cases, metrics, evaluation_result) tuple.
 
     Raises:
         ValueError: If selected_metrics is empty or contains unknown keys.
@@ -202,7 +289,11 @@ def run_batch_evaluation(qa_pairs, selected_metrics: list):
     metrics = [all_metrics[k] for k in selected_metrics]
     print(f"📐 Running GEval metrics: {selected_metrics}")
 
-    return test_cases, metrics
+    # Run DeepEval in batch mode as requested.
+    # In this DeepEval version, evaluate() expects an iterable of test cases.
+    evaluation_result = evaluate(test_cases=test_cases, metrics=metrics)
+
+    return test_cases, metrics, evaluation_result
 
 
 # --- Results Output ---
@@ -299,7 +390,13 @@ def save_initial_results(qa_pairs, output_filepath="evaluation_results.json"):
     print(f"\n💾 Initial results saved to: {output_filepath}")
 
 
-def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filepath="evaluation_results.json"):
+def update_results_with_metrics(
+    qa_pairs,
+    test_cases,
+    metrics_list,
+    evaluation_result=None,
+    output_filepath="evaluation_results.json",
+):
     """
     Run DeepEval metrics on each test case and update the JSON file with scores and reasons.
     Each metric is measured individually per test case to extract the score and reason attributes.
@@ -309,46 +406,56 @@ def update_results_with_metrics(qa_pairs, test_cases, metrics_list, output_filep
 
     results = data['results']
 
-    print("\n🔎 Evaluating with DeepEval (LLM-as-a-Judge)...")
+    print("\n🔎 Extracting DeepEval metric data...")
+
+    extracted_by_case = _extract_results_from_evaluate(evaluation_result)
 
     for i, (result, test_case) in enumerate(zip(results, test_cases)):
-        metric_data = {}
+        metric_data = extracted_by_case[i] if i < len(extracted_by_case) else {}
         all_passed = True
 
-        for metric in metrics_list:
-            try:
-                # Measure the metric on this specific test case
-                metric.measure(test_case)
+        # Fallback to measure() only if evaluate() output did not provide metric data.
+        if not metric_data:
+            for metric in metrics_list:
+                try:
+                    metric.measure(test_case)
+                    if hasattr(metric, 'score') and metric.score is not None:
+                        metric_name = getattr(metric, 'name', metric.__class__.__name__)
+                        threshold = getattr(metric, 'threshold', 0.5)
+                        passed = metric.score >= threshold
+                        metric_data[metric_name] = {
+                            'score': metric.score,
+                            'reason': getattr(metric, 'reason', None),
+                            'threshold': threshold,
+                            'passed': passed
+                        }
+                except Exception as e:
+                    print(f"  Warning: Could not extract metric data for {metric} on test case {i}: {e}")
+                    all_passed = False
 
-                # Access the score and reason from the metric object
-                if hasattr(metric, 'score') and metric.score is not None:
-                    # Get metric name
-                    metric_name = getattr(metric, 'name', metric.__class__.__name__)
+        for metric_name, data_row in metric_data.items():
+            threshold = data_row.get("threshold")
+            score = data_row.get("score")
+            passed = data_row.get("passed")
 
-                    # Get threshold for this metric
-                    threshold = getattr(metric, 'threshold', 0.5)
-                    passed = metric.score >= threshold
+            if threshold is None:
+                threshold = next(
+                    (getattr(m, "threshold", 0.5) for m in metrics_list if getattr(m, "name", "") == metric_name),
+                    0.5
+                )
+                data_row["threshold"] = threshold
 
-                    # Store both score and reason
-                    metric_data[metric_name] = {
-                        'score': metric.score,
-                        'reason': getattr(metric, 'reason', None),
-                        'threshold': threshold,
-                        'passed': passed
-                    }
+            if passed is None and isinstance(score, (int, float)):
+                passed = score >= threshold
+                data_row["passed"] = passed
 
-                    # Track if any metric failed
-                    if not passed:
-                        all_passed = False
-
-                    print(
-                        f"  Test case {i + 1}, {metric_name}: {metric.score:.4f} (threshold: {threshold}) - {'✅ PASS' if passed else '❌ FAIL'}")
-                    if hasattr(metric, 'reason') and metric.reason:
-                        reason_preview = metric.reason[:100] + "..." if len(metric.reason) > 100 else metric.reason
-                        print(f"    Reason: {reason_preview}")
-            except Exception as e:
-                print(f"  Warning: Could not extract metric data for {metric} on test case {i}: {e}")
+            if passed is False:
                 all_passed = False
+
+            if isinstance(score, (int, float)):
+                print(
+                    f"  Test case {i + 1}, {metric_name}: {score:.4f} (threshold: {threshold}) - {'✅ PASS' if passed else '❌ FAIL'}"
+                )
 
         result['evaluation_metrics'] = metric_data if metric_data else None
         result['status'] = 'pass' if all_passed and metric_data else 'failed'
@@ -376,13 +483,13 @@ def main():
     save_initial_results(qa_pairs, OUTPUT_JSON)
 
     # STEP 2: Run DeepEval evaluation (specify which metrics to run)
-    test_cases, metrics = run_batch_evaluation(
+    test_cases, metrics, evaluation_result = run_batch_evaluation(
         qa_pairs,
         selected_metrics=["fluency", "relevance", "correctness", "hallucination"]
     )
 
     # STEP 3: Update JSON with metrics
-    update_results_with_metrics(qa_pairs, test_cases, metrics, OUTPUT_JSON)
+    update_results_with_metrics(qa_pairs, test_cases, metrics, evaluation_result, OUTPUT_JSON)
 
     # Display final results
     display_results(qa_pairs, test_cases)

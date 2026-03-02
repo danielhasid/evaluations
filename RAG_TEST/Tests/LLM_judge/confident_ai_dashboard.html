@@ -74,18 +74,18 @@
                 <span class="text-gray-400 text-sm font-medium">Avg Model Score</span>
                 <div class="text-2xl font-bold mt-1 text-emerald-400 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-                    0.67
+                    0.99
                 </div>
             </div>
             <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                 <span class="text-gray-400 text-sm font-medium">Evaluation Mode</span>
                 <div class="mt-2 flex items-center gap-2">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border bg-violet-500/10 border-violet-500/30 text-violet-400">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        RAG
+                        GEval
                     </span>
                 </div>
-                <div class="text-xs text-gray-500 mt-1.5">RAG Metrics (Faithfulness, Precision, Recall, Relevancy)</div>
+                <div class="text-xs text-gray-500 mt-1.5">GEval Custom Criteria</div>
             </div>
         </div>
 
@@ -96,12 +96,12 @@
                     <div class="w-48 h-48 relative">
                         <canvas id="passRateChart"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center mt-2">
-                            <span class="text-4xl font-bold text-white">66.7%</span>
-                            <span class="text-xs text-gray-400 mt-1">2/3 passed</span>
+                            <span class="text-4xl font-bold text-white">100.0%</span>
+                            <span class="text-xs text-gray-400 mt-1">3/3 passed</span>
                         </div>
                     </div>
                     <div class="text-center mt-6">
-                        <p class="text-white font-medium">1 failing test cases</p>
+                        <p class="text-white font-medium">0 failing test cases</p>
                         <p class="text-gray-500 text-xs mt-1">based on JSON passed/status fields</p>
                     </div>
                 </div>
@@ -126,15 +126,15 @@
                         <tbody>
                             
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: FAILED | JSON status: failed | FAILED METRIC: ContextualPrecisionMetric (0.000)" data-target="details_0">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness [GEval] (1.000)" data-target="details_0">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
-                    bg-rose-500/20 text-rose-400 border-rose-500/30">
-                    Failed
+                    bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                    Passed
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language developed by Guido van ...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Python is a high-level, interpreted programming language. It is known for its cl...</td>
         </tr>
 
         <tr id="details_0" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -143,11 +143,11 @@
                     <div class="flex flex-wrap gap-6">
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Status</div>
-                            <div class="text-gray-300">FAILED</div>
+                            <div class="text-gray-300">PASSED</div>
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">JSON status</div>
-                            <div class="text-gray-300">failed</div>
+                            <div class="text-gray-300">pass</div>
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Metadata</div>
@@ -155,7 +155,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-26T10:05:16.299150</div>
+                            <div class="text-gray-300">2026-03-02T16:10:05.601055</div>
                         </div>
                     </div>
 
@@ -166,7 +166,7 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language developed by Guido van Rossum. It is known for its readability and simplicity, with a syntax that focuses on English keywords rather than symbols or punctuation. Python supports multiple programming paradigms, including procedural, object-oriented, and functional programming. It is widely used for web development, data analysis, artificial intelligence, and scientific computing, among other applications.</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">Python is a high-level, interpreted programming language. It is known for its clear syntax and readability, which reduces the cost of program maintenance. Python supports modules and packages, which encourages program modularity and code reuse. It is also a versatile language used for various types of programming, ranging from web development to data analysis.</div>
                     </div>
 
                     <div>
@@ -180,14 +180,26 @@
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
-                    <div class="text-gray-300 text-xs">0.000</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness [GEval]</div>
+                    <div class="text-gray-300 text-xs">1.000</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
-                    <div>passed: false</div>
+                    <div>threshold: 0.500</div>
+                    <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 0.00 because all nodes in the retrieval contexts are irrelevant to the input question &#x27;What is Python?&#x27; Each node, starting from the first, provides factual or technical information about Python, such as &#x27;Python is a high-level programming language created by Guido van Rossum,&#x27; which does not directly address the expected output &#x27;Python is cool.&#x27; The subsequent nodes continue to focus on Python&#x27;s technical capabilities, syntax features, and applications, none of which align with the input&#x27;s context, leading to a low precision score.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response accurately states that lists are mutable and tuples are immutable, and correctly identifies the use of square brackets for lists and parentheses for tuples. No factual errors or omissions are present.</div>
+            </div>
+            
+            <div class="border border-gray-800/50 rounded-md p-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-gray-200 font-semibold text-xs">Fluency [GEval]</div>
+                    <div class="text-gray-300 text-xs">1.000</div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
+                    <div>threshold: 0.500</div>
+                    <div>passed: true</div>
+                </div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The Actual Output is grammatically correct, clear, and easy to understand. It accurately explains the difference between a list and a tuple, mentioning mutability and syntax, thus fully preserving the meaning of the Input.</div>
             </div>
             
                         </div>
@@ -205,7 +217,7 @@
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">How does async/await work in Python?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a set of tools for handling asynchronous programming, w...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">Async/await in Python is a method of handling asynchronous programming, which al...</td>
         </tr>
 
         <tr id="details_1" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -226,7 +238,7 @@
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-26T10:05:16.299150</div>
+                            <div class="text-gray-300">2026-03-02T16:10:05.601055</div>
                         </div>
                     </div>
 
@@ -237,11 +249,17 @@
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a set of tools for handling asynchronous programming, which allows for concurrent execution of code. It works by defining coroutines, which are special functions that can be paused and resumed, allowing them to yield control back to the event loop, thus opening up possibilities for other operations to execute.
+                        <div class="text-gray-200 whitespace-pre-wrap">Async/await in Python is a method of handling asynchronous programming, which allows for concurrent execution of tasks without the need for multi-threading. 
 
-&#x27;async&#x27; is used to declare a function as a coroutine. &#x27;await&#x27; is used inside these coroutines to call other coroutines or awaitable objects. When &#x27;await&#x27; is called, the function is paused and control is passed back to the event loop which can then carry on executing other tasks. When the awaited task is done, control is given back to the coroutine and it resumes execution. 
+The &#x27;async&#x27; keyword is used to define a function as a coroutine. This means that the function will be non-blocking and it can be stopped in the middle of execution, allowing other tasks to run.
 
-This way, async/await helps to write asynchronous code in a more readable and concise way, making it look like synchronous code, while still executing asynchronously.</div>
+The &#x27;await&#x27; keyword can only be used inside an &#x27;async&#x27; function and is used before a function call to indicate that the function should be awaited, i.e., the program will pause and wait for that function to complete before moving on.
+
+This system allows Python to handle IO-bound and high-latency operations more efficiently, as it can switch to other tasks while waiting for a response. It&#x27;s particularly useful in applications like web scraping, API calls, and other IO-bound tasks. 
+
+However, async/await does not natively support CPU-bound tasks, as Python’s Global Interpreter Lock (GIL) allows only one thread to execute Python bytecodes at a time, even on multi-core CPUs. 
+
+To handle CPU-bound tasks, you would need to use multi-processing or offload the computation to a C-extension that releases the GIL.</div>
                     </div>
 
                     <div>
@@ -255,14 +273,26 @@ This way, async/await helps to write asynchronous code in a more readable and co
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness [GEval]</div>
                     <div class="text-gray-300 text-xs">1.000</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
+                    <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because all relevant nodes are ranked higher than the irrelevant node. The first node explains that &#x27;Async/await in Python allows for asynchronous programming using coroutines,&#x27; directly addressing the input. The second node clarifies the role of the &#x27;async&#x27; keyword, while the third node explains the &#x27;await&#x27; keyword&#x27;s function. The fourth node highlights the benefit of concurrency without blocking the main thread. The fifth node, although related to async programming, does not directly explain how async/await works, justifying its lower rank.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The actual output matches the expected output exactly, with no contradictions or omissions of detail. All facts are preserved and there is no vagueness or missing information.</div>
+            </div>
+            
+            <div class="border border-gray-800/50 rounded-md p-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-gray-200 font-semibold text-xs">Fluency [GEval]</div>
+                    <div class="text-gray-300 text-xs">1.000</div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
+                    <div>threshold: 0.500</div>
+                    <div>passed: true</div>
+                </div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response is grammatically correct, well-structured, and free of errors. It clearly explains what Python is, mentioning its high-level and interpreted nature, clear syntax, modularity, and versatility. The explanation is easy to understand and effectively communicates the intended message in direct response to the question.</div>
             </div>
             
                         </div>
@@ -272,7 +302,7 @@ This way, async/await helps to write asynchronous code in a more readable and co
         </tr>
         
         <tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"
-            title="STATUS: PASSED | JSON status: pass | NO METRICS: N/A (0.000)" data-target="details_2">
+            title="STATUS: PASSED | JSON status: pass | LOWEST METRIC: Correctness [GEval] (0.924)" data-target="details_2">
           <td class="py-4 px-4 whitespace-nowrap">
                 <span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border
                     bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -280,7 +310,7 @@ This way, async/await helps to write asynchronous code in a more readable and co
                 </span>
           </td>
             <td class="py-4 px-4 text-gray-300 truncate max-w-[200px]">What is the difference between a list and a tuple?</td>
-            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list is mutable, meaning you can modify its content. They are defined by havin...</td>
+            <td class="py-4 px-4 text-gray-400 truncate max-w-[300px]">A list is mutable, meaning you can change its elements (add, modify, or delete),...</td>
         </tr>
 
         <tr id="details_2" class="hidden border-b border-gray-800/50 bg-[#15161b]">
@@ -301,7 +331,7 @@ This way, async/await helps to write asynchronous code in a more readable and co
                         </div>
                         <div>
                             <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Timestamp</div>
-                            <div class="text-gray-300">2026-02-26T10:05:16.299150</div>
+                            <div class="text-gray-300">2026-03-02T16:10:05.601055</div>
                         </div>
                     </div>
 
@@ -312,7 +342,7 @@ This way, async/await helps to write asynchronous code in a more readable and co
 
                     <div>
                         <div class="text-gray-500 uppercase tracking-wider text-[10px] font-semibold mb-1">Generated Answer</div>
-                        <div class="text-gray-200 whitespace-pre-wrap">A list is mutable, meaning you can modify its content. They are defined by having values between square brackets [ ] . On the other hand, a tuple is immutable, meaning you cannot change its content once it&#x27;s defined. Tuples are defined by having values between parentheses ( ).</div>
+                        <div class="text-gray-200 whitespace-pre-wrap">A list is mutable, meaning you can change its elements (add, modify, or delete), while a tuple is immutable, meaning its elements cannot be changed once assigned. Lists are defined using square brackets [], while tuples are defined using parentheses ().</div>
                     </div>
 
                     <div>
@@ -326,14 +356,26 @@ This way, async/await helps to write asynchronous code in a more readable and co
                             
             <div class="border border-gray-800/50 rounded-md p-3">
                 <div class="flex items-center justify-between">
-                    <div class="text-gray-200 font-semibold text-xs">ContextualPrecisionMetric</div>
+                    <div class="text-gray-200 font-semibold text-xs">Correctness [GEval]</div>
+                    <div class="text-gray-300 text-xs">0.924</div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
+                    <div>threshold: 0.500</div>
+                    <div>passed: true</div>
+                </div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response accurately explains that async/await is a pattern for asynchronous code in Python, describes the use of &#x27;async&#x27; to define coroutine functions, and explains that &#x27;await&#x27; pauses execution until the coroutine completes, allowing concurrency. No factual errors or omissions are present.</div>
+            </div>
+            
+            <div class="border border-gray-800/50 rounded-md p-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-gray-200 font-semibold text-xs">Fluency [GEval]</div>
                     <div class="text-gray-300 text-xs">1.000</div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] uppercase tracking-wider text-gray-500">
-                    <div>threshold: 0.700</div>
+                    <div>threshold: 0.500</div>
                     <div>passed: true</div>
                 </div>
-                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The score is 1.00 because all relevant nodes are ranked higher than irrelevant nodes. The first four nodes effectively address the key aspects of the input question, such as the mutability and syntax differences between lists and tuples. The irrelevant nodes, ranked fifth and sixth, discuss additional details like methods and memory efficiency, which are not central to the input&#x27;s focus on mutability and syntax.</div>
+                <div class="text-gray-400 mt-2 whitespace-pre-wrap">The response is grammatically correct, well-structured, and clearly explains how async/await works in Python. It covers the use of &#x27;async&#x27; and &#x27;await&#x27; keywords, their purpose, and the types of tasks they are suited for. The explanation also addresses limitations regarding CPU-bound tasks and the GIL, providing a complete and accurate answer to the input question.</div>
             </div>
             
                         </div>
@@ -364,8 +406,14 @@ This way, async/await helps to write asynchronous code in a more readable and co
                 
         <div class="bg-[#1e1a2e] border border-[#3d2f6a]/40 rounded-md p-3 text-center">
             <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#a855f7"></div>
-            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">ContextualPrecision</div>
-            <div class="text-lg font-bold text-white mt-1">0.67</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Correctness [GEval]</div>
+            <div class="text-lg font-bold text-white mt-1">0.97</div>
+        </div>
+        
+        <div class="bg-[#1e1e14] border border-[#6a5e1a]/40 rounded-md p-3 text-center">
+            <div class="w-3 h-3 rounded-full mx-auto mb-1" style="background-color:#fde047"></div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-mono leading-tight">Fluency [GEval]</div>
+            <div class="text-lg font-bold text-white mt-1">1.00</div>
         </div>
         
             </div>
@@ -383,59 +431,35 @@ This way, async/await helps to write asynchronous code in a more readable and co
                 <span class="ml-auto px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">AI Generated</span>
             </div>
             <div class="mt-4">
-                <p class="text-gray-300 text-sm leading-relaxed">Evaluation Report for LLM Performance</p>
-<div class="mb-3"></div>
-<div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">1</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Overall Score &amp; Status</h4></div>
+                <div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">1</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Overall Score &amp; Status</h4></div>
 <div class="mb-3"></div>
 <ul class="space-y-1.5 ml-4">
 <li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Total Number of Tests: 3</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Number of Tests Passed: 2</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Number of Tests Failed: 1</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Overall Pass Rate: 66.67%</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Average Score for ContextualPrecisionMetric: 0.67</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Number of Tests Passed: 3</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Number of Tests Failed: 0</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Overall Pass Rate: 100%</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Average Score for Each Metric:</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Fluency [GEval]: 1.0</span></li>
+<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Correctness [GEval]: 0.974788573866532</span></li>
 </ul>
 <div class="mb-3"></div>
-<p class="text-gray-300 text-sm leading-relaxed">Executive Summary</p>
-<p class="text-gray-300 text-sm leading-relaxed">The system demonstrates a moderate level of performance with a pass rate of 66.67%. It excels in providing detailed and contextually relevant answers for more complex questions, as evidenced by the successful handling of advanced concepts and data structures. However, it struggles with simpler, more subjective questions, indicating potential issues with understanding or aligning with the expected answer format.</p>
+<p class="text-gray-300 text-sm leading-relaxed">Executive Summary: The system demonstrates excellent performance across all evaluated tests, achieving a perfect pass rate. The generated answers are consistently fluent and correct, indicating a high level of understanding and articulation in the responses. The model effectively handles both basic and advanced concepts, as well as data structure explanations, with no failures recorded in this evaluation.</p>
 <div class="mb-3"></div>
 <div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">2</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Weaknesses Analysis</h4></div>
 <div class="mb-3"></div>
-<p class="text-gray-300 text-sm leading-relaxed">Core Issues</p>
-<p class="text-gray-300 text-sm leading-relaxed">The primary metric causing failures is the ContextualPrecisionMetric. The failed test indicates a significant gap between the generated answer and the expected answer, particularly in terms of relevance and alignment with the expected context.</p>
-<div class="mb-3"></div>
-<p class="text-gray-300 text-sm leading-relaxed">Pattern of Weaknesses</p>
-<p class="text-gray-300 text-sm leading-relaxed">The model tends to fail when the expected answer is subjective or lacks technical depth. In the failed test, the expected answer was a simple, subjective statement (&quot;Python is cool&quot;), while the generated answer provided a detailed technical description. This suggests that the model may over-explain or provide excessive detail when a concise, subjective response is required.</p>
+<p class="text-gray-300 text-sm leading-relaxed">Since there are no failed tests in this evaluation, there are no specific weaknesses to analyze. The model has successfully met or exceeded the thresholds for all metrics in every test case.</p>
 <div class="mb-3"></div>
 <div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">3</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Detailed Breakdown of FAILED Tests ONLY</h4></div>
 <div class="mb-3"></div>
-<p class="text-gray-300 text-sm leading-relaxed">Test 1: Basic Knowledge</p>
-<div class="mb-3"></div>
-<ul class="space-y-1.5 ml-4">
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Question: What is Python?</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Metric Scores:</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>ContextualPrecisionMetric: 0</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Explanation of Failure:</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Expected Answer: &quot;Python is cool&quot;</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Generated Answer: A detailed technical description of Python as a programming language.</span></li>
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Reason for Failure: The generated answer failed to align with the expected subjective and concise response. The model provided factual and technical information, which was irrelevant to the expected context of the answer. The ContextualPrecisionMetric score was 0 because none of the nodes in the generated answer matched the expected simplicity and subjectivity of the expected answer.</span></li>
-</ul>
+<p class="text-gray-300 text-sm leading-relaxed">There are no failed tests to provide a detailed breakdown for, as all tests passed successfully.</p>
 <div class="mb-3"></div>
 <div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">4</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Actionable Recommendations</h4></div>
 <div class="mb-3"></div>
-<div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">1</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Refine Prompt Engineering:</h4></div>
-<ul class="space-y-1.5 ml-4">
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Adjust the model&#x27;s prompts to better handle subjective or non-technical questions. This could involve training the model to recognize when a question requires a concise or subjective answer rather than a detailed technical explanation.</span></li>
-</ul>
+<p class="text-gray-300 text-sm leading-relaxed">1. Maintain Current Model Performance: Given the high success rate, it is crucial to maintain the current model configuration and training processes. Regularly update the model with new data to ensure it continues to perform well as programming languages and technologies evolve.</p>
 <div class="mb-3"></div>
-<div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">2</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Review and Adjust Dataset Ground Truth:</h4></div>
-<ul class="space-y-1.5 ml-4">
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Ensure that the expected answers in the dataset are realistic and consistent with the type of response that would be considered correct. This may involve revisiting the ground truth for subjective questions to ensure they are clear and aligned with the model&#x27;s capabilities.</span></li>
-</ul>
+<p class="text-gray-300 text-sm leading-relaxed">2. Expand Test Coverage: To further validate the model&#x27;s robustness, consider expanding the test suite to include more diverse and challenging questions, particularly those that might involve edge cases or less common scenarios in programming.</p>
 <div class="mb-3"></div>
-<div class="flex items-center gap-2 mt-6 mb-3"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center border border-violet-500/30">3</span><h4 class="text-gray-100 font-semibold text-sm tracking-wide">Re-evaluate Evaluation Thresholds:</h4></div>
-<ul class="space-y-1.5 ml-4">
-<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed"><span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400/60 mt-2"></span><span>Consider adjusting the evaluation thresholds for metrics like ContextualPrecisionMetric to better capture the nuances of subjective versus technical questions. This could involve setting different thresholds for different types of questions to ensure fair evaluation across diverse question categories.</span></li>
-</ul>
+<p class="text-gray-300 text-sm leading-relaxed">3. Continuous Monitoring and Evaluation: Implement a continuous evaluation process to monitor the model&#x27;s performance over time. This will help identify any potential degradation in performance early and allow for timely interventions to maintain high standards.</p>
             </div>
         </div>
 
@@ -449,7 +473,7 @@ This way, async/await helps to write asynchronous code in a more readable and co
             data: {
                 labels: ['Passed', 'Failed'],
                 datasets: [{
-                    data: [2, 1],
+                    data: [3, 0],
                     backgroundColor: ['#10b981', '#f43f5e'],
                     borderWidth: 0,
                     cutout: '88%'
@@ -470,8 +494,8 @@ This way, async/await helps to write asynchronous code in a more readable and co
                 labels: ["What is Python?", "How does async/...", "What is the dif..."],
                 datasets: [
                     {
-                label: "ContextualPrecisionMetric",
-                data: [0.0, 1.0, 1.0],
+                label: "Correctness [GEval]",
+                data: [0.9999999999999998, 1.0, 0.9243657215995962],
                 backgroundColor: "#a855f733",
                 borderColor: "#a855f7",
                 borderWidth: 2.5,
@@ -480,6 +504,19 @@ This way, async/await helps to write asynchronous code in a more readable and co
                 pointRadius: 5,
                 pointHoverRadius: 8,
                 pointStyle: "circle",
+                fill: false
+            },
+{
+                label: "Fluency [GEval]",
+                data: [1.0, 1.0, 1.0000000000000002],
+                backgroundColor: "#fde04733",
+                borderColor: "#fde047",
+                borderWidth: 2.5,
+                borderDash: [],
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                pointStyle: "rect",
                 fill: false
             }
                 ]
