@@ -463,6 +463,7 @@ def _build_per_run_summaries(source_files: list) -> list:
         pass_rate = (passed_count / total_count * 100) if total_count > 0 else 0.0
         metric_avgs = {m: (mean(metric_scores_all[m]) if metric_scores_all[m] else 0.0)
                        for m in run_metric_names}
+        metric_stdevs = {m: _compute_metric_stdev(metric_scores_all[m]) for m in run_metric_names}
 
         # Sort: failed first, then passed
         table_items.sort(key=lambda r: r["passed"])
@@ -512,6 +513,7 @@ def _build_per_run_summaries(source_files: list) -> list:
             "failed": failed_count,
             "pass_rate": round(pass_rate, 1),
             "metric_avgs": metric_avgs,
+            "metric_stdevs": metric_stdevs,
             "metric_names": run_metric_names,
             "metric_colors": run_metric_color,
             "analysis_summary": analysis_summary_text,
@@ -596,9 +598,12 @@ def create_dashboard(json_filepath, html_filepath):
     for idx, m in enumerate(all_metric_names):
         color = metric_color[m]
         data_points = []
+        sd_points = []
         for r in runs:
             avg = r["metric_avgs"].get(m, None)
+            sd = r.get("metric_stdevs", {}).get(m, None)
             data_points.append(round(avg, 4) if avg is not None else None)
+            sd_points.append(round(sd, 4) if sd is not None else None)
 
         valid = [p for p in data_points if p is not None]
         delta = ""
@@ -614,6 +619,7 @@ def create_dashboard(json_filepath, html_filepath):
             '{',
             f'                label: {json.dumps(label_with_delta)},',
             f'                data: {json.dumps(data_points)},',
+            f'                errorBarData: {json.dumps(sd_points)},',
             f'                backgroundColor: {json.dumps(color + "33")},',
             f'                borderColor: {json.dumps(color)},',
             '                borderWidth: 2.5,',
@@ -655,7 +661,7 @@ def create_dashboard(json_filepath, html_filepath):
 
         runs_table_rows_html += (
             f'<tr class="run-row table-hover-row border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer"'
-            f' onclick="showDetail({i})">'
+            f' data-run-idx="{i}" data-evaluator="{_safe(r["evaluator_type"])}" onclick="showDetail({i})">'
             f'<td class="py-3 px-4 text-gray-400 text-sm whitespace-nowrap">{_safe(ts_display)}</td>'
             f'<td class="py-3 px-4">'
             f'<span class="font-mono text-violet-400 text-xs bg-violet-500/10 px-2 py-1 rounded border border-violet-500/20"'
@@ -682,6 +688,7 @@ def create_dashboard(json_filepath, html_filepath):
             "failed": r["failed"],
             "pass_rate": r["pass_rate"],
             "metric_avgs": r["metric_avgs"],
+            "metric_stdevs": r.get("metric_stdevs", {}),
             "metric_names": r["metric_names"],
             "metric_colors": r["metric_colors"],
             "analysis_summary": r["analysis_summary"],
@@ -690,6 +697,7 @@ def create_dashboard(json_filepath, html_filepath):
         }
         runs_js_parts.append(json.dumps(obj, ensure_ascii=False))
     runs_js_array = "[\n  " + ",\n  ".join(runs_js_parts) + "\n]"
+    metric_color_map_json = json.dumps(metric_color)
 
     # ── HTML template ─────────────────────────────────────────────────────────
     html_template = f"""<!DOCTYPE html>
@@ -768,13 +776,19 @@ def create_dashboard(json_filepath, html_filepath):
             <div class="flex items-center justify-between mb-6 no-print">
                 <div>
                     <h1 class="text-white font-bold text-xl tracking-tight">Test Runs</h1>
-                    <p class="text-gray-500 text-xs mt-1">Using evaluation data from {total_runs} displayed test run{"s" if total_runs != 1 else ""} · click a row to inspect</p>
+                    <p class="text-gray-500 text-xs mt-1">Using evaluation data from <span id="runs-visible-caption-count">{total_runs}</span> displayed test run{"s" if total_runs != 1 else ""} · click a row to inspect</p>
                 </div>
-                <button onclick="window.print()"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors border border-violet-500/50 cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    Export PDF
-                </button>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Evaluator</span>
+                        <select id="evaluator-filter-select" class="bg-[#101117] border border-gray-700 rounded px-3 py-2 text-xs text-gray-200 min-w-[130px]"></select>
+                    </div>
+                    <button onclick="window.print()"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors border border-violet-500/50 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Export PDF
+                    </button>
+                </div>
             </div>
 
             <!-- Stat cards -->
@@ -791,23 +805,23 @@ def create_dashboard(json_filepath, html_filepath):
                 </div>
                 <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                     <span class="text-gray-400 text-sm font-medium">Total Runs</span>
-                    <div class="text-2xl font-bold mt-1 text-white">{total_runs}</div>
+                    <div id="stat-total-runs" class="text-2xl font-bold mt-1 text-white">{total_runs}</div>
                     <div class="text-xs text-gray-500 mt-1">source JSON files</div>
                 </div>
                 <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                     <span class="text-gray-400 text-sm font-medium">Overall Pass Rate</span>
-                    <div class="text-2xl font-bold mt-1 {'text-emerald-400' if overall_pass_rate >= 80 else 'text-yellow-400' if overall_pass_rate >= 50 else 'text-rose-400'}">{overall_pass_rate:.1f}%</div>
-                    <div class="text-xs text-gray-500 mt-1">{total_passed}/{total_cases} passed</div>
+                    <div id="stat-pass-rate" class="text-2xl font-bold mt-1 {'text-emerald-400' if overall_pass_rate >= 80 else 'text-yellow-400' if overall_pass_rate >= 50 else 'text-rose-400'}">{overall_pass_rate:.1f}%</div>
+                    <div id="stat-pass-count" class="text-xs text-gray-500 mt-1">{total_passed}/{total_cases} passed</div>
                 </div>
                 <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                     <span class="text-gray-400 text-sm font-medium">Evaluation Mode</span>
                     <div class="mt-2 flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border {evaluator_bg}">
+                        <span id="stat-evaluator-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border {evaluator_bg}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            {evaluator_type}
+                            <span id="stat-evaluator-text">{evaluator_type}</span>
                         </span>
                     </div>
-                    <div class="text-xs text-gray-500 mt-1.5">{evaluator_desc}</div>
+                    <div id="stat-evaluator-desc" class="text-xs text-gray-500 mt-1.5">{evaluator_desc}</div>
                 </div>
             </div>
 
@@ -816,7 +830,7 @@ def create_dashboard(json_filepath, html_filepath):
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-gray-200 font-semibold text-sm">Test Run Performance</h3>
-                        <p class="text-gray-500 text-xs mt-0.5">Average metric score per run · one point per evaluation file</p>
+                        <p class="text-gray-500 text-xs mt-0.5">Average metric score per run · one point per evaluation file · error bar = 1 SD</p>
                     </div>
                     <span class="px-2.5 py-1 rounded bg-[#2e2348] text-[#a78bfa] text-[10px] uppercase font-bold tracking-wider border border-[#4c3a7a]">All Metrics</span>
                 </div>
@@ -849,7 +863,7 @@ def create_dashboard(json_filepath, html_filepath):
             <div class="glass-panel p-0 overflow-hidden">
                 <div class="p-5 border-b border-gray-800/50 flex items-center justify-between">
                     <div>
-                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong id="runs-showing-range" class="text-white">1 to {total_runs}</strong> of <strong class="text-white">{total_runs}</strong> test run{"s" if total_runs != 1 else ""}</h3>
+                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong id="runs-showing-range" class="text-white">1 to {total_runs}</strong> of <strong id="runs-showing-total" class="text-white">{total_runs}</strong> test run{"s" if total_runs != 1 else ""}</h3>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -863,7 +877,7 @@ def create_dashboard(json_filepath, html_filepath):
                                 <th class="py-3 px-4 font-semibold w-32">Test Result</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="runs-table-body">
                             {runs_table_rows_html}
                         </tbody>
                     </table>
@@ -1155,6 +1169,12 @@ def create_dashboard(json_filepath, html_filepath):
     <script>
         // ── Embedded run data ─────────────────────────────────────────────────
         const RUNS_DATA = {runs_js_array};
+        const METRIC_COLOR_MAP = {metric_color_map_json};
+        const METRIC_FALLBACK_COLORS = ['#a855f7', '#fde047', '#3b82f6', '#10b981', '#f97316', '#22d3ee', '#f43f5e', '#14b8a6'];
+        const dashboardState = {{
+            selectedEvaluator: 'All',
+            selectedRunIdx: -1,
+        }};
 
         // ── Formatting helpers ────────────────────────────────────────────────
         function cleanSummaryMarkdown(text) {{
@@ -1177,47 +1197,232 @@ def create_dashboard(json_filepath, html_filepath):
 
         // ── Runs list chart ───────────────────────────────────────────────────
         let runsChart = null;
+        const runsErrorBarsPlugin = {{
+            id: 'runsErrorBars',
+            afterDatasetsDraw(chart) {{
+                const yScale = chart.scales && chart.scales.y;
+                if (!yScale) return;
+                const tooltipActive = chart.tooltip && typeof chart.tooltip.getActiveElements === 'function'
+                    ? chart.tooltip.getActiveElements()
+                    : [];
+                const chartActive = typeof chart.getActiveElements === 'function'
+                    ? chart.getActiveElements()
+                    : [];
+                const activeElements = (Array.isArray(tooltipActive) && tooltipActive.length)
+                    ? tooltipActive
+                    : chartActive;
+                if (!Array.isArray(activeElements) || activeElements.length === 0) return;
+                const hoveredPoints = new Set();
+                activeElements.forEach(function(active) {{
+                    const dsIdx = active && active.datasetIndex;
+                    const ptIdx = active && active.index;
+                    if (Number.isInteger(dsIdx) && Number.isInteger(ptIdx)) {{
+                        hoveredPoints.add(dsIdx + ':' + ptIdx);
+                    }}
+                }});
+                if (hoveredPoints.size === 0) return;
+                const ctx = chart.ctx;
+                const capWidth = 4;
+                ctx.save();
+                chart.data.datasets.forEach(function(dataset, datasetIndex) {{
+                    if (!chart.isDatasetVisible(datasetIndex)) return;
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta || !Array.isArray(meta.data)) return;
+                    const sdValues = Array.isArray(dataset.errorBarData) ? dataset.errorBarData : [];
+                    ctx.strokeStyle = dataset.borderColor || '#9ca3af';
+                    ctx.lineWidth = 1.5;
+                    meta.data.forEach(function(point, index) {{
+                        if (!hoveredPoints.has(datasetIndex + ':' + index)) return;
+                        const meanValue = dataset.data[index];
+                        const sdValue = sdValues[index];
+                        if (meanValue == null || sdValue == null) return;
+                        const mean = Number(meanValue);
+                        const sd = Number(sdValue);
+                        if (!Number.isFinite(mean) || !Number.isFinite(sd) || sd <= 0) return;
+                        const upper = Math.min(yScale.max, mean + sd);
+                        const lower = Math.max(yScale.min, mean - sd);
+                        const yTop = yScale.getPixelForValue(upper);
+                        const yBottom = yScale.getPixelForValue(lower);
+                        const x = point.x;
+                        if (!Number.isFinite(x) || !Number.isFinite(yTop) || !Number.isFinite(yBottom)) return;
+                        ctx.beginPath();
+                        ctx.moveTo(x, yTop);
+                        ctx.lineTo(x, yBottom);
+                        ctx.moveTo(x - capWidth, yTop);
+                        ctx.lineTo(x + capWidth, yTop);
+                        ctx.moveTo(x - capWidth, yBottom);
+                        ctx.lineTo(x + capWidth, yBottom);
+                        ctx.stroke();
+                    }});
+                }});
+                ctx.restore();
+            }}
+        }};
         try {{
             const runsChartEl = document.getElementById('runsChart');
             if (runsChartEl && typeof Chart !== 'undefined') {{
                 const runsCtx = runsChartEl.getContext('2d');
                 runsChart = new Chart(runsCtx, {{
-            type: 'line',
-            data: {{
-                labels: {json.dumps(run_labels)},
-                datasets: [
-                    {runs_chart_datasets_str}
-                ]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {{ intersect: false, mode: 'index' }},
-                scales: {{
-                    x: {{
-                        grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
-                        ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                    type: 'line',
+                    data: {{
+                        labels: {json.dumps(run_labels)},
+                        datasets: [
+                            {runs_chart_datasets_str}
+                        ]
                     }},
-                    y: {{
-                        min: 0.0, max: 1.05,
-                        grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
-                        ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                    plugins: [runsErrorBarsPlugin],
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {{ intersect: false, mode: 'index' }},
+                        scales: {{
+                            x: {{
+                                grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                                ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                            }},
+                            y: {{
+                                min: 0.0, max: 1.05,
+                                grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                                ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                            }}
+                        }},
+                        plugins: {{
+                            legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }},
+                            tooltip: {{
+                                backgroundColor: '#1f2028', borderColor: '#2e3040', borderWidth: 1,
+                                titleColor: '#e5e7eb', bodyColor: '#9ca3af', padding: 10,
+                                callbacks: {{
+                                    label: function(context) {{
+                                        const ds = context.dataset || {{}};
+                                        const metricName = String(ds.label || '').split('  ')[0];
+                                        const mean = context.parsed && context.parsed.y;
+                                        if (mean == null || !Number.isFinite(Number(mean))) {{
+                                            return metricName + ': N/A';
+                                        }}
+                                        const sdSeries = Array.isArray(ds.errorBarData) ? ds.errorBarData : [];
+                                        const sdRaw = sdSeries[context.dataIndex];
+                                        if (sdRaw == null || !Number.isFinite(Number(sdRaw))) {{
+                                            return metricName + ': ' + Number(mean).toFixed(3);
+                                        }}
+                                        return metricName + ': ' + Number(mean).toFixed(3) + ' ± ' + Number(sdRaw).toFixed(3) + ' (1 SD)';
+                                    }}
+                                }}
+                            }}
+                        }}
                     }}
-                }},
-                plugins: {{
-                    legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }},
-                    tooltip: {{
-                        backgroundColor: '#1f2028', borderColor: '#2e3040', borderWidth: 1,
-                        titleColor: '#e5e7eb', bodyColor: '#9ca3af', padding: 10
-                    }}
-                }}
-            }}
-        }});
+                }});
             }} else if (runsChartEl && typeof Chart === 'undefined') {{
                 console.warn('Chart.js failed to load (check CDN/network). Open via http:// for best results.');
             }}
         }} catch (e) {{
             console.error('Chart init failed:', e);
+        }}
+
+        function withAlpha(color, alpha) {{
+            const safeAlpha = Number.isFinite(Number(alpha)) ? Math.max(0, Math.min(1, Number(alpha))) : 1;
+            const raw = String(color || '').trim();
+            if (!raw) return 'rgba(156,163,175,' + safeAlpha + ')';
+            if (/^#([0-9a-f]{{3}}|[0-9a-f]{{6}})$/i.test(raw)) {{
+                let hex = raw.slice(1);
+                if (hex.length === 3) {{
+                    hex = hex.split('').map(function(ch) {{ return ch + ch; }}).join('');
+                }}
+                const r = parseInt(hex.slice(0, 2), 16);
+                const g = parseInt(hex.slice(2, 4), 16);
+                const b = parseInt(hex.slice(4, 6), 16);
+                return 'rgba(' + r + ',' + g + ',' + b + ',' + safeAlpha + ')';
+            }}
+            const rgbMatch = raw.match(/^rgba?\\(([^)]+)\\)$/i);
+            if (rgbMatch) {{
+                const parts = rgbMatch[1].split(',').map(function(part) {{ return part.trim(); }});
+                if (parts.length >= 3) {{
+                    return 'rgba(' + Number(parts[0]) + ',' + Number(parts[1]) + ',' + Number(parts[2]) + ',' + safeAlpha + ')';
+                }}
+            }}
+            return raw;
+        }}
+
+        function getMetricColor(metricName, metricIndex) {{
+            if (METRIC_COLOR_MAP && METRIC_COLOR_MAP[metricName]) return METRIC_COLOR_MAP[metricName];
+            return METRIC_FALLBACK_COLORS[metricIndex % METRIC_FALLBACK_COLORS.length];
+        }}
+
+        function renderRunsChartForEntries(filteredEntries) {{
+            if (!runsChart) return;
+            const runs = filteredEntries.map(function(item) {{ return item.run; }});
+            const labels = runs.map(function(run) {{ return run.label; }});
+            const metricSet = new Set();
+            runs.forEach(function(run) {{
+                (run.metric_names || []).forEach(function(name) {{ metricSet.add(name); }});
+            }});
+            const metricNames = Array.from(metricSet).sort();
+            const datasets = metricNames.map(function(metricName, metricIdx) {{
+                const color = getMetricColor(metricName, metricIdx);
+                const series = runs.map(function(run) {{
+                    const val = run.metric_avgs ? run.metric_avgs[metricName] : null;
+                    return (val == null || !Number.isFinite(Number(val))) ? null : Number(val);
+                }});
+                const sdSeries = runs.map(function(run) {{
+                    const sd = run.metric_stdevs ? run.metric_stdevs[metricName] : null;
+                    return (sd == null || !Number.isFinite(Number(sd))) ? null : Number(sd);
+                }});
+                return {{
+                    label: metricName,
+                    data: series,
+                    errorBarData: sdSeries,
+                    backgroundColor: color + '33',
+                    borderColor: color,
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    fill: false,
+                    spanGaps: true,
+                }};
+            }});
+
+            runsChart.data.labels = labels;
+            runsChart.data.datasets = datasets;
+            runsChart.update('none');
+        }}
+
+        function updateRunsChartHighlightRange(start, endExclusive) {{
+            if (!runsChart || !runsChart.data || !Array.isArray(runsChart.data.labels)) return;
+            const labels = runsChart.data.labels;
+            const total = labels.length;
+            const startIdx = Math.max(0, Number(start) || 0);
+            const endIdx = Math.max(startIdx, Math.min(total, Number(endExclusive) || 0));
+            const isHighlighted = function(idx) {{
+                return idx >= startIdx && idx < endIdx;
+            }};
+
+            (runsChart.data.datasets || []).forEach(function(ds) {{
+                const baseColor = ds.__baseColor || ds.borderColor || '#9ca3af';
+                ds.__baseColor = baseColor;
+                ds.__basePointRadius = ds.__basePointRadius == null ? 3 : ds.__basePointRadius;
+                ds.__baseBorderWidth = ds.__baseBorderWidth == null ? (typeof ds.borderWidth === 'number' ? ds.borderWidth : 2) : ds.__baseBorderWidth;
+
+                const dimColor = withAlpha(baseColor, 0.2);
+                ds.pointRadius = labels.map(function(_, idx) {{ return isHighlighted(idx) ? ds.__basePointRadius : 2; }});
+                ds.pointHoverRadius = labels.map(function(_, idx) {{ return isHighlighted(idx) ? 6 : 3; }});
+                ds.pointBackgroundColor = labels.map(function(_, idx) {{ return isHighlighted(idx) ? baseColor : dimColor; }});
+                ds.pointBorderColor = ds.pointBackgroundColor.slice();
+                ds.borderWidth = ds.__baseBorderWidth;
+                ds.segment = {{
+                    borderColor: function(ctx) {{
+                        const i0 = Number(ctx && ctx.p0DataIndex);
+                        const i1 = Number(ctx && ctx.p1DataIndex);
+                        return (isHighlighted(i0) && isHighlighted(i1)) ? baseColor : dimColor;
+                    }},
+                    borderWidth: function(ctx) {{
+                        const i0 = Number(ctx && ctx.p0DataIndex);
+                        const i1 = Number(ctx && ctx.p1DataIndex);
+                        return (isHighlighted(i0) && isHighlighted(i1)) ? ds.__baseBorderWidth : Math.max(1, ds.__baseBorderWidth - 0.5);
+                    }}
+                }};
+            }});
+
+            runsChart.update('none');
         }}
 
         // ── Detail donut chart instance ───────────────────────────────────────
@@ -1237,6 +1442,8 @@ def create_dashboard(json_filepath, html_filepath):
         const runsTableState = {{
             page: 1,
             pageSize: 5,
+            visibleStart: 0,
+            visibleEnd: 0,
         }};
         const compareState = {{
             leftIdx: 0,
@@ -1284,6 +1491,54 @@ def create_dashboard(json_filepath, html_filepath):
 
         function statusOrder(status) {{
             return (status || '').toLowerCase() === 'failed' ? 0 : 1;
+        }}
+
+        function normalizeEvaluatorName(name) {{
+            const s = String(name || '').trim();
+            return s || 'Unknown';
+        }}
+
+        function getEvaluatorBadgeClass(evalType) {{
+            if (evalType === 'RAG') return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+            if (evalType === 'GEval') return 'bg-violet-500/10 border-violet-500/30 text-violet-400';
+            return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
+        }}
+
+        function getEvaluatorDescription(evalType) {{
+            if (evalType === 'RAG') return 'RAG Metrics (Faithfulness, Precision, Recall, Relevancy)';
+            if (evalType === 'GEval') return 'GEval Custom Criteria';
+            if (evalType === 'Mixed') return 'Mixed evaluator types across runs';
+            return 'Unknown evaluator';
+        }}
+
+        function isRunVisibleByEvaluator(run) {{
+            if (!run) return false;
+            if (dashboardState.selectedEvaluator === 'All') return true;
+            return normalizeEvaluatorName(run.evaluator_type) === dashboardState.selectedEvaluator;
+        }}
+
+        function getFilteredRunEntries() {{
+            const out = [];
+            RUNS_DATA.forEach(function(run, idx) {{
+                if (isRunVisibleByEvaluator(run)) {{
+                    out.push({{ run: run, idx: idx }});
+                }}
+            }});
+            return out;
+        }}
+
+        function setupEvaluatorFilterOptions() {{
+            const selectEl = document.getElementById('evaluator-filter-select');
+            if (!selectEl) return;
+            const evaluatorSet = new Set();
+            RUNS_DATA.forEach(function(run) {{
+                evaluatorSet.add(normalizeEvaluatorName(run.evaluator_type));
+            }});
+            const options = ['All'].concat(Array.from(evaluatorSet).sort());
+            selectEl.innerHTML = options.map(function(opt) {{
+                return '<option value="' + escapeHtml(opt) + '">' + escapeHtml(opt) + '</option>';
+            }}).join('');
+            selectEl.value = dashboardState.selectedEvaluator;
         }}
 
         function getCasesFromLegacyRows(run) {{
@@ -1608,6 +1863,7 @@ def create_dashboard(json_filepath, html_filepath):
             const leftRun = RUNS_DATA[compareState.leftIdx];
             const rightRun = RUNS_DATA[compareState.rightIdx];
             if (!leftRun || !rightRun) return;
+            if (!isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) return;
 
             const compareStats = renderCompareCases(leftRun, rightRun);
             const chip = document.getElementById('compare-summary-chip');
@@ -1622,6 +1878,7 @@ def create_dashboard(json_filepath, html_filepath):
             const leftRun = RUNS_DATA[leftIdx];
             const rightRun = RUNS_DATA[rightIdx];
             if (!leftRun || !rightRun) return;
+            if (!isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) return;
 
             compareState.leftIdx = leftIdx;
             compareState.rightIdx = rightIdx;
@@ -1654,6 +1911,50 @@ def create_dashboard(json_filepath, html_filepath):
             showCompare(leftIdx, rightIdx);
         }}
 
+        function renderSummaryCards(filteredEntries) {{
+            const runs = filteredEntries.map(function(item) {{ return item.run; }});
+            const totalRuns = runs.length;
+            const totalCases = runs.reduce(function(acc, run) {{ return acc + Number(run.total || 0); }}, 0);
+            const totalPassed = runs.reduce(function(acc, run) {{ return acc + Number(run.passed || 0); }}, 0);
+            const overallPassRate = totalCases > 0 ? (totalPassed / totalCases * 100) : 0;
+
+            const totalRunsEl = document.getElementById('stat-total-runs');
+            const passRateEl = document.getElementById('stat-pass-rate');
+            const passCountEl = document.getElementById('stat-pass-count');
+            const evalBadgeEl = document.getElementById('stat-evaluator-badge');
+            const evalTextEl = document.getElementById('stat-evaluator-text');
+            const evalDescEl = document.getElementById('stat-evaluator-desc');
+            const captionCountEl = document.getElementById('runs-visible-caption-count');
+
+            if (captionCountEl) captionCountEl.textContent = String(totalRuns);
+            if (totalRunsEl) totalRunsEl.textContent = String(totalRuns);
+            if (passRateEl) {{
+                passRateEl.textContent = overallPassRate.toFixed(1) + '%';
+                passRateEl.classList.remove('text-emerald-400', 'text-yellow-400', 'text-rose-400');
+                if (overallPassRate >= 80) passRateEl.classList.add('text-emerald-400');
+                else if (overallPassRate >= 50) passRateEl.classList.add('text-yellow-400');
+                else passRateEl.classList.add('text-rose-400');
+            }}
+            if (passCountEl) passCountEl.textContent = totalPassed + '/' + totalCases + ' passed';
+
+            let evaluatorType = 'Unknown';
+            const evalSet = new Set(runs.map(function(run) {{ return normalizeEvaluatorName(run.evaluator_type); }}));
+            if (runs.length === 0) evaluatorType = 'Unknown';
+            else if (evalSet.size === 1) evaluatorType = Array.from(evalSet)[0];
+            else evaluatorType = 'Mixed';
+
+            if (evalTextEl) evalTextEl.textContent = evaluatorType;
+            if (evalDescEl) evalDescEl.textContent = getEvaluatorDescription(evaluatorType);
+            if (evalBadgeEl) {{
+                evalBadgeEl.classList.remove('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400',
+                    'bg-violet-500/10', 'border-violet-500/30', 'text-violet-400',
+                    'bg-gray-500/10', 'border-gray-500/30', 'text-gray-400');
+                getEvaluatorBadgeClass(evaluatorType).split(' ').forEach(function(cls) {{
+                    if (cls) evalBadgeEl.classList.add(cls);
+                }});
+            }}
+        }}
+
         function setupCompareMenu() {{
             const leftEl = document.getElementById('compare-left-select');
             const rightEl = document.getElementById('compare-right-select');
@@ -1661,62 +1962,83 @@ def create_dashboard(json_filepath, html_filepath):
             const hint = document.getElementById('compare-menu-hint');
             if (!leftEl || !rightEl || !openBtn || !hint) return;
 
+            const filteredEntries = getFilteredRunEntries();
             leftEl.innerHTML = '';
             rightEl.innerHTML = '';
-            RUNS_DATA.forEach(function(run, idx) {{
+            filteredEntries.forEach(function(entry) {{
+                const run = entry.run;
+                const idx = entry.idx;
                 const optionLabel = getRunOptionLabel(run, idx);
                 leftEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
                 rightEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
             }});
 
+            if (!isRunVisibleByEvaluator(RUNS_DATA[compareState.leftIdx])) {{
+                compareState.leftIdx = filteredEntries.length ? filteredEntries[0].idx : 0;
+            }}
+            if (!isRunVisibleByEvaluator(RUNS_DATA[compareState.rightIdx]) || compareState.rightIdx === compareState.leftIdx) {{
+                compareState.rightIdx = filteredEntries.length > 1 ? filteredEntries[1].idx : compareState.leftIdx;
+            }}
+
             leftEl.value = String(compareState.leftIdx);
             rightEl.value = String(compareState.rightIdx);
 
-            if (RUNS_DATA.length < 2) {{
+            if (filteredEntries.length < 2) {{
                 openBtn.disabled = true;
-                hint.textContent = 'Need at least 2 runs to enable compare mode.';
-                return;
+                hint.textContent = 'Need at least 2 filtered runs to enable compare mode.';
+            }} else {{
+                openBtn.disabled = false;
+                hint.textContent = 'Tip: compare newest run against a baseline run to catch regressions fast.';
             }}
 
-            openBtn.disabled = false;
-            hint.textContent = 'Tip: compare newest run against a baseline run to catch regressions fast.';
-            openBtn.addEventListener('click', showCompareFromSelectors);
+            if (!openBtn.dataset.bound) {{
+                openBtn.onclick = showCompareFromSelectors;
 
-            const onlyRegressions = document.getElementById('compare-filter-regressions');
-            const onlyChanged = document.getElementById('compare-filter-changed');
-            if (onlyRegressions) {{
-                onlyRegressions.checked = compareState.onlyRegressions;
-                onlyRegressions.addEventListener('change', function(e) {{
-                    compareState.onlyRegressions = !!e.target.checked;
-                    renderActiveCompare();
-                }});
-            }}
-            if (onlyChanged) {{
-                onlyChanged.checked = compareState.onlyChanged;
-                onlyChanged.addEventListener('change', function(e) {{
-                    compareState.onlyChanged = !!e.target.checked;
-                    closeCompareCaseDetails();
-                    renderActiveCompare();
-                }});
-            }}
+                const onlyRegressions = document.getElementById('compare-filter-regressions');
+                const onlyChanged = document.getElementById('compare-filter-changed');
+                if (onlyRegressions) {{
+                    onlyRegressions.checked = compareState.onlyRegressions;
+                    onlyRegressions.addEventListener('change', function(e) {{
+                        compareState.onlyRegressions = !!e.target.checked;
+                        renderActiveCompare();
+                    }});
+                }}
+                if (onlyChanged) {{
+                    onlyChanged.checked = compareState.onlyChanged;
+                    onlyChanged.addEventListener('change', function(e) {{
+                        compareState.onlyChanged = !!e.target.checked;
+                        closeCompareCaseDetails();
+                        renderActiveCompare();
+                    }});
+                }}
 
-            const compareCloseBtn = document.getElementById('compare-case-close');
-            if (compareCloseBtn) {{
-                compareCloseBtn.addEventListener('click', closeCompareCaseDetails);
+                const compareCloseBtn = document.getElementById('compare-case-close');
+                if (compareCloseBtn) {{
+                    compareCloseBtn.addEventListener('click', closeCompareCaseDetails);
+                }}
+                openBtn.dataset.bound = '1';
             }}
         }}
 
         function renderRunsTablePage() {{
             const rows = Array.from(document.querySelectorAll('tr.run-row'));
-            const total = rows.length;
+            const filteredRows = rows.filter(function(row) {{
+                const runIdx = Number(row.getAttribute('data-run-idx'));
+                return isRunVisibleByEvaluator(RUNS_DATA[runIdx]);
+            }});
+            const filteredEntries = getFilteredRunEntries();
+            const total = filteredRows.length;
             const totalPages = Math.max(1, Math.ceil(total / runsTableState.pageSize));
             if (runsTableState.page > totalPages) runsTableState.page = totalPages;
             if (runsTableState.page < 1) runsTableState.page = 1;
 
             const start = (runsTableState.page - 1) * runsTableState.pageSize;
             const end = Math.min(start + runsTableState.pageSize, total);
+            runsTableState.visibleStart = start;
+            runsTableState.visibleEnd = end;
 
-            rows.forEach(function(row, idx) {{
+            rows.forEach(function(row) {{ row.style.display = 'none'; }});
+            filteredRows.forEach(function(row, idx) {{
                 row.style.display = (idx >= start && idx < end) ? '' : 'none';
             }});
 
@@ -1728,10 +2050,16 @@ def create_dashboard(json_filepath, html_filepath):
             if (showingRange) {{
                 showingRange.textContent = (total === 0 ? '0 to 0' : (start + 1) + ' to ' + end);
             }}
+            const showingTotal = document.getElementById('runs-showing-total');
+            if (showingTotal) showingTotal.textContent = String(total);
             const pageCur = document.getElementById('runs-page-current');
             if (pageCur) pageCur.textContent = String(runsTableState.page);
             const pageTotal = document.getElementById('runs-page-total');
             if (pageTotal) pageTotal.textContent = String(totalPages);
+
+            renderSummaryCards(filteredEntries);
+            renderRunsChartForEntries(filteredEntries);
+            updateRunsChartHighlightRange(start, end);
         }}
 
         function setupRunsTablePagination() {{
@@ -1750,13 +2078,13 @@ def create_dashboard(json_filepath, html_filepath):
                 renderRunsTablePage();
             }});
             next.addEventListener('click', function() {{
-                const totalRows = document.querySelectorAll('tr.run-row').length;
+                const totalRows = getFilteredRunEntries().length;
                 const totalPages = Math.max(1, Math.ceil(totalRows / runsTableState.pageSize));
                 runsTableState.page = Math.min(totalPages, runsTableState.page + 1);
                 renderRunsTablePage();
             }});
             last.addEventListener('click', function() {{
-                const totalRows = document.querySelectorAll('tr.run-row').length;
+                const totalRows = getFilteredRunEntries().length;
                 runsTableState.page = Math.max(1, Math.ceil(totalRows / runsTableState.pageSize));
                 renderRunsTablePage();
             }});
@@ -2100,8 +2428,32 @@ def create_dashboard(json_filepath, html_filepath):
             document.getElementById('view-compare').classList.add('hidden');
         }}
 
+        function applyEvaluatorFilter(resetPagination) {{
+            if (resetPagination) {{
+                runsTableState.page = 1;
+            }}
+            setupCompareMenu();
+            renderRunsTablePage();
+
+            const activeRun = RUNS_DATA[dashboardState.selectedRunIdx];
+            if (document.getElementById('view-detail') && !document.getElementById('view-detail').classList.contains('hidden')) {{
+                if (!activeRun || !isRunVisibleByEvaluator(activeRun)) {{
+                    showRuns();
+                }}
+            }}
+            if (document.getElementById('view-compare') && !document.getElementById('view-compare').classList.contains('hidden')) {{
+                const leftRun = RUNS_DATA[compareState.leftIdx];
+                const rightRun = RUNS_DATA[compareState.rightIdx];
+                if (!leftRun || !rightRun || !isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) {{
+                    showRuns();
+                }}
+            }}
+        }}
+
         function showDetail(idx) {{
             const run = RUNS_DATA[idx];
+            if (!run || !isRunVisibleByEvaluator(run)) return;
+            dashboardState.selectedRunIdx = idx;
             document.getElementById('view-runs').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
 
@@ -2183,6 +2535,14 @@ def create_dashboard(json_filepath, html_filepath):
         }}
 
         setupCaseGridEvents();
+        setupEvaluatorFilterOptions();
+        const evaluatorSelect = document.getElementById('evaluator-filter-select');
+        if (evaluatorSelect) {{
+            evaluatorSelect.addEventListener('change', function(e) {{
+                dashboardState.selectedEvaluator = String(e.target.value || 'All');
+                applyEvaluatorFilter(true);
+            }});
+        }}
         setupCompareMenu();
         setupRunsTablePagination();
     </script>

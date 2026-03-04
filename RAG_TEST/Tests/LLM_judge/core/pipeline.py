@@ -40,7 +40,11 @@ def run_pipeline(config: RunConfig, adapter: EvaluatorAdapter) -> Tuple[list, li
 
     if config.output_json is None:
         os.makedirs(config.output_dir, exist_ok=True)
-        output_json = make_run_json_path(config.output_dir, prefix="evaluation_results")
+        output_json = make_run_json_path(
+            config.output_dir,
+            prefix="evaluation_results",
+            evaluator_type=adapter.evaluator_type,
+        )
     else:
         output_json = config.output_json
         config.output_dir = os.path.dirname(os.path.abspath(output_json)) or "."

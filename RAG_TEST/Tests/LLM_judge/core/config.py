@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
@@ -27,7 +28,25 @@ class RunConfig:
     truths_extraction_limit: Optional[int] = None
 
 
-def make_run_json_path(output_dir: str = ".", prefix: str = "evaluation_results") -> str:
+def _sanitize_filename_token(token: str) -> str:
+    token = str(token or "").strip()
+    if not token:
+        return "Unknown"
+    # Keep names filesystem-safe while preserving readable evaluator labels.
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", token)
+    return safe.strip("_") or "Unknown"
+
+
+def make_run_json_path(
+    output_dir: str = ".",
+    prefix: str = "evaluation_results",
+    evaluator_type: Optional[str] = None,
+) -> str:
     """Generate a unique timestamped JSON filename for one evaluation run."""
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return os.path.join(output_dir, f"{prefix}_{ts}.json")
+    evaluator_token = _sanitize_filename_token(evaluator_type) if evaluator_type is not None else None
+    if evaluator_token:
+        filename = f"{evaluator_token}_{prefix}_{ts}.json"
+    else:
+        filename = f"{prefix}_{ts}.json"
+    return os.path.join(output_dir, filename)

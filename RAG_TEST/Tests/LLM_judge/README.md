@@ -17,7 +17,7 @@ golden_set.csv
 [2] Generate answers        (GPT-4 via core/answering.py)
       |
       v
-[3] Save initial results    (core/results.py -> results/evaluation_results_TIMESTAMP.json)
+[3] Save initial results    (core/results.py -> results/<Evaluator>_evaluation_results_TIMESTAMP.json)
       |
       v
 [4] Run evaluation metrics  (DeepEval via adapter: run_batch_evaluation)
@@ -63,7 +63,8 @@ LLM_judge/
 |
 |-- golden_set.csv                Your Q&A test dataset (you provide this)
 `-- results/                      All output files land here (auto-created)
-    |-- evaluation_results_TIMESTAMP.json
+    |-- GEval_evaluation_results_TIMESTAMP.json
+    |-- RAG_evaluation_results_TIMESTAMP.json
     `-- ...
 ```
 
@@ -134,7 +135,7 @@ adapter handles the differences.
 
 Steps:
 1. Validate metrics against `adapter.valid_metric_keys`
-2. Create the `results/` folder and generate a timestamped output filename
+2. Create the `results/` folder and generate an evaluator-prefixed timestamped filename
 3. Load Q&A pairs from CSV via `adapter.load_golden_set_csv()`
 4. Generate answers via `OpenAIAnswerGenerator` (GPT-4)
 5. Save initial results to JSON (no scores yet, status = "pending")
@@ -310,8 +311,16 @@ center.run_rag_evaluation(metrics=["answer_relevancy", "faithfulness"])
 
 ### 4. Output
 
-Results are saved to `results/evaluation_results_YYYYMMDD_HHMMSS.json`.
+Results are saved to:
+- `results/GEval_evaluation_results_YYYYMMDD_HHMMSS.json` for GEval runs
+- `results/RAG_evaluation_results_YYYYMMDD_HHMMSS.json` for RAG runs
 The GPT-4o analysis summary is appended to the same file automatically.
+
+### Dashboard Notes
+
+- The dashboard is regenerated automatically after each run at `results/confident_ai_dashboard.html`.
+- The runs view supports filtering by evaluator (`All`, `GEval`, `RAG`), and the performance graph updates to match the selected filter.
+- If two metrics have exactly the same values across runs, their lines can overlap visually (for example, `FaithfulnessMetric` and `AnswerRelevancyMetric` both at `1.0`).
 
 ---
 
