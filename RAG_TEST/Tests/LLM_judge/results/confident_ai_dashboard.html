@@ -15,6 +15,10 @@
         .font-mono { font-family: 'Courier New', monospace; }
         .table-hover-row { transition: background-color 120ms ease, box-shadow 120ms ease; }
         .table-hover-row:hover { background-color: rgba(71, 85, 105, 0.24) !important; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2); }
+        /* Keep native date/time pickers in dark black/white palette */
+        .dark-date-input { color-scheme: dark; }
+        .dark-date-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.9; }
+        .dark-date-input::-webkit-datetime-edit { color: #e5e7eb; }
         /* Brighter text for test-case modal readability */
         #detail-case-modal .text-gray-500 { color: #d1d5db !important; }
         #detail-case-modal .text-gray-400 { color: #e5e7eb !important; }
@@ -86,6 +90,37 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                         Export PDF
                     </button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 mb-6 no-print">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" data-time-preset="custom" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">Custom</button>
+                    <button type="button" data-time-preset="today" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">Today</button>
+                    <button type="button" data-time-preset="yesterday" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">Yesterday</button>
+                    <button type="button" data-time-preset="7d" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">7D</button>
+                    <button type="button" data-time-preset="30d" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">30D</button>
+                    <button type="button" data-time-preset="3m" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">3M</button>
+                    <button type="button" data-time-preset="12m" class="time-filter-btn px-3 py-1.5 rounded border border-gray-700 bg-[#101117] text-gray-200 text-xs font-medium">12M</button>
+                </div>
+                <div id="time-filter-custom-panel" class="hidden mt-3 rounded border border-gray-800 bg-[#11131a] p-2">
+                    <div class="flex w-full flex-wrap items-end justify-start gap-3">
+                        <div class="space-y-2">
+                            <label class="text-[11px] uppercase tracking-wider text-gray-500">Start</label>
+                            <input id="time-custom-start-date" type="date" class="dark-date-input bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-44">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] uppercase tracking-wider text-gray-500">End</label>
+                            <input id="time-custom-end-date" type="date" class="dark-date-input bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-44">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="time-filter-error" class="text-xs text-rose-400 min-h-[16px]"></div>
+                        <div class="mt-2 flex items-center justify-start gap-2">
+                            <button id="time-custom-reset" type="button" class="px-3 py-1.5 rounded border border-gray-700 text-xs text-gray-300 hover:text-white">Reset</button>
+                            <button id="time-custom-apply" type="button" class="px-3 py-1.5 rounded border border-violet-500/50 bg-violet-600 text-xs text-white hover:bg-violet-500">Apply</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -481,6 +516,9 @@
         const dashboardState = {
             selectedEvaluator: 'All',
             selectedRunIdx: -1,
+            timeRangePreset: '12m',
+            customStartDate: '',
+            customEndDate: '',
         };
 
         // ── Formatting helpers ────────────────────────────────────────────────
@@ -883,6 +921,75 @@
             return (status || '').toLowerCase() === 'failed' ? 0 : 1;
         }
 
+        function parseRunTimestamp(run) {
+            if (!run) return null;
+            const raw = run.timestamp;
+            if (!raw) return null;
+            const dt = new Date(raw);
+            return Number.isFinite(dt.getTime()) ? dt : null;
+        }
+
+        function startOfDay(dateObj) {
+            const d = new Date(dateObj);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function endOfDay(dateObj) {
+            const d = new Date(dateObj);
+            d.setHours(23, 59, 59, 999);
+            return d;
+        }
+
+        function parseCustomRangeDateTime(dateValue, isEnd) {
+            if (!dateValue) return null;
+            const composed = new Date(dateValue + 'T00:00:00');
+            if (!Number.isFinite(composed.getTime())) return null;
+            if (isEnd) {
+                composed.setHours(23, 59, 59, 999);
+            }
+            return composed;
+        }
+
+        function getTimeRangeBounds() {
+            const now = new Date();
+            const preset = dashboardState.timeRangePreset;
+            if (preset === 'today') {
+                return { start: startOfDay(now), end: now };
+            }
+            if (preset === 'yesterday') {
+                const y = new Date(now);
+                y.setDate(y.getDate() - 1);
+                return { start: startOfDay(y), end: endOfDay(y) };
+            }
+            if (preset === '7d') {
+                const start = new Date(now);
+                start.setDate(start.getDate() - 7);
+                return { start: start, end: now };
+            }
+            if (preset === '30d') {
+                const start = new Date(now);
+                start.setDate(start.getDate() - 30);
+                return { start: start, end: now };
+            }
+            if (preset === '3m') {
+                const start = new Date(now);
+                start.setMonth(start.getMonth() - 3);
+                return { start: start, end: now };
+            }
+            if (preset === '12m') {
+                const start = new Date(now);
+                start.setMonth(start.getMonth() - 12);
+                return { start: start, end: now };
+            }
+            if (preset === 'custom') {
+                const start = parseCustomRangeDateTime(dashboardState.customStartDate, false);
+                const end = parseCustomRangeDateTime(dashboardState.customEndDate, true);
+                return { start: start, end: end };
+            }
+            return { start: null, end: null };
+        }
+
         function normalizeEvaluatorName(name) {
             const s = String(name || '').trim();
             return s || 'Unknown';
@@ -907,10 +1014,25 @@
             return normalizeEvaluatorName(run.evaluator_type) === dashboardState.selectedEvaluator;
         }
 
+        function isRunVisibleByTimeRange(run) {
+            if (!run) return false;
+            const bounds = getTimeRangeBounds();
+            if (!bounds.start && !bounds.end) return true;
+            const runDt = parseRunTimestamp(run);
+            if (!runDt) return false;
+            if (bounds.start && runDt < bounds.start) return false;
+            if (bounds.end && runDt > bounds.end) return false;
+            return true;
+        }
+
+        function isRunVisible(run) {
+            return isRunVisibleByEvaluator(run) && isRunVisibleByTimeRange(run);
+        }
+
         function getFilteredRunEntries() {
             const out = [];
             RUNS_DATA.forEach(function(run, idx) {
-                if (isRunVisibleByEvaluator(run)) {
+                if (isRunVisible(run)) {
                     out.push({ run: run, idx: idx });
                 }
             });
@@ -929,6 +1051,30 @@
                 return '<option value="' + escapeHtml(opt) + '">' + escapeHtml(opt) + '</option>';
             }).join('');
             selectEl.value = dashboardState.selectedEvaluator;
+        }
+
+        function updateTimePresetButtons() {
+            document.querySelectorAll('.time-filter-btn').forEach(function(btn) {
+                const preset = btn.getAttribute('data-time-preset');
+                const active = preset === dashboardState.timeRangePreset;
+                btn.classList.toggle('border-violet-500/50', active);
+                btn.classList.toggle('bg-violet-600', active);
+                btn.classList.toggle('text-white', active);
+                btn.classList.toggle('border-gray-700', !active);
+                btn.classList.toggle('bg-[#101117]', !active);
+                btn.classList.toggle('text-gray-200', !active);
+            });
+            const customPanel = document.getElementById('time-filter-custom-panel');
+            if (customPanel) {
+                customPanel.classList.toggle('hidden', dashboardState.timeRangePreset !== 'custom');
+            }
+        }
+
+        function syncTimeInputsFromState() {
+            const startDateEl = document.getElementById('time-custom-start-date');
+            const endDateEl = document.getElementById('time-custom-end-date');
+            if (startDateEl) startDateEl.value = dashboardState.customStartDate || '';
+            if (endDateEl) endDateEl.value = dashboardState.customEndDate || '';
         }
 
         function getCasesFromLegacyRows(run) {
@@ -1253,7 +1399,7 @@
             const leftRun = RUNS_DATA[compareState.leftIdx];
             const rightRun = RUNS_DATA[compareState.rightIdx];
             if (!leftRun || !rightRun) return;
-            if (!isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) return;
+            if (!isRunVisible(leftRun) || !isRunVisible(rightRun)) return;
 
             const compareStats = renderCompareCases(leftRun, rightRun);
             const chip = document.getElementById('compare-summary-chip');
@@ -1268,7 +1414,7 @@
             const leftRun = RUNS_DATA[leftIdx];
             const rightRun = RUNS_DATA[rightIdx];
             if (!leftRun || !rightRun) return;
-            if (!isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) return;
+            if (!isRunVisible(leftRun) || !isRunVisible(rightRun)) return;
 
             compareState.leftIdx = leftIdx;
             compareState.rightIdx = rightIdx;
@@ -1363,10 +1509,10 @@
                 rightEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
             });
 
-            if (!isRunVisibleByEvaluator(RUNS_DATA[compareState.leftIdx])) {
+            if (!isRunVisible(RUNS_DATA[compareState.leftIdx])) {
                 compareState.leftIdx = filteredEntries.length ? filteredEntries[0].idx : 0;
             }
-            if (!isRunVisibleByEvaluator(RUNS_DATA[compareState.rightIdx]) || compareState.rightIdx === compareState.leftIdx) {
+            if (!isRunVisible(RUNS_DATA[compareState.rightIdx]) || compareState.rightIdx === compareState.leftIdx) {
                 compareState.rightIdx = filteredEntries.length > 1 ? filteredEntries[1].idx : compareState.leftIdx;
             }
 
@@ -1414,7 +1560,7 @@
             const rows = Array.from(document.querySelectorAll('tr.run-row'));
             const filteredRows = rows.filter(function(row) {
                 const runIdx = Number(row.getAttribute('data-run-idx'));
-                return isRunVisibleByEvaluator(RUNS_DATA[runIdx]);
+                return isRunVisible(RUNS_DATA[runIdx]);
             });
             const filteredEntries = getFilteredRunEntries();
             const total = filteredRows.length;
@@ -1818,31 +1964,116 @@
             document.getElementById('view-compare').classList.add('hidden');
         }
 
-        function applyEvaluatorFilter(resetPagination) {
+        function applyDashboardFilters(resetPagination) {
             if (resetPagination) {
                 runsTableState.page = 1;
             }
+            updateTimePresetButtons();
             setupCompareMenu();
             renderRunsTablePage();
 
             const activeRun = RUNS_DATA[dashboardState.selectedRunIdx];
             if (document.getElementById('view-detail') && !document.getElementById('view-detail').classList.contains('hidden')) {
-                if (!activeRun || !isRunVisibleByEvaluator(activeRun)) {
+                if (!activeRun || !isRunVisible(activeRun)) {
                     showRuns();
                 }
             }
             if (document.getElementById('view-compare') && !document.getElementById('view-compare').classList.contains('hidden')) {
                 const leftRun = RUNS_DATA[compareState.leftIdx];
                 const rightRun = RUNS_DATA[compareState.rightIdx];
-                if (!leftRun || !rightRun || !isRunVisibleByEvaluator(leftRun) || !isRunVisibleByEvaluator(rightRun)) {
+                if (!leftRun || !rightRun || !isRunVisible(leftRun) || !isRunVisible(rightRun)) {
                     showRuns();
                 }
             }
         }
 
+        function setupTimeFilterControls() {
+            const errEl = document.getElementById('time-filter-error');
+            document.querySelectorAll('.time-filter-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const preset = String(btn.getAttribute('data-time-preset') || '12m').toLowerCase();
+                    dashboardState.timeRangePreset = preset;
+                    if (errEl) errEl.textContent = '';
+                    if (preset !== 'custom') {
+                        applyDashboardFilters(true);
+                    } else {
+                        updateTimePresetButtons();
+                        const customStartDateEl = document.getElementById('time-custom-start-date');
+                        if (customStartDateEl) {
+                            customStartDateEl.focus();
+                            // Chromium supports showPicker(); fallback focus still works.
+                            if (typeof customStartDateEl.showPicker === 'function') {
+                                try {
+                                    customStartDateEl.showPicker();
+                                } catch (e) {
+                                    // Ignore user-gesture or browser restrictions.
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            const startDateEl = document.getElementById('time-custom-start-date');
+            const endDateEl = document.getElementById('time-custom-end-date');
+            const applyBtn = document.getElementById('time-custom-apply');
+            const resetBtn = document.getElementById('time-custom-reset');
+
+            [startDateEl, endDateEl].forEach(function(inputEl) {
+                if (!inputEl) return;
+                inputEl.addEventListener('focus', function() {
+                    if (typeof inputEl.showPicker === 'function') {
+                        try {
+                            inputEl.showPicker();
+                        } catch (e) {
+                            // Ignore browser-specific restrictions.
+                        }
+                    }
+                });
+            });
+
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function() {
+                    dashboardState.customStartDate = startDateEl ? String(startDateEl.value || '') : '';
+                    dashboardState.customEndDate = endDateEl ? String(endDateEl.value || '') : '';
+
+                    const bounds = getTimeRangeBounds();
+                    if (!bounds.start || !bounds.end) {
+                        if (errEl) errEl.textContent = 'Please set both start and end date/time.';
+                        return;
+                    }
+                    if (bounds.start > bounds.end) {
+                        if (errEl) errEl.textContent = 'Start time must be before end time.';
+                        return;
+                    }
+                    if (errEl) errEl.textContent = '';
+                    applyDashboardFilters(true);
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    const now = new Date();
+                    const yyyyMmDd = now.toISOString().slice(0, 10);
+                    dashboardState.customStartDate = yyyyMmDd;
+                    dashboardState.customEndDate = yyyyMmDd;
+                    syncTimeInputsFromState();
+                    if (errEl) errEl.textContent = '';
+                });
+            }
+
+            const defaultEnd = new Date();
+            const defaultStart = new Date(defaultEnd);
+            defaultStart.setDate(defaultStart.getDate() - 30);
+            dashboardState.customStartDate = defaultStart.toISOString().slice(0, 10);
+            dashboardState.customEndDate = defaultEnd.toISOString().slice(0, 10);
+            syncTimeInputsFromState();
+            updateTimePresetButtons();
+        }
+
         function showDetail(idx) {
             const run = RUNS_DATA[idx];
-            if (!run || !isRunVisibleByEvaluator(run)) return;
+            if (!run || !isRunVisible(run)) return;
             dashboardState.selectedRunIdx = idx;
             document.getElementById('view-runs').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
@@ -1926,11 +2157,12 @@
 
         setupCaseGridEvents();
         setupEvaluatorFilterOptions();
+        setupTimeFilterControls();
         const evaluatorSelect = document.getElementById('evaluator-filter-select');
         if (evaluatorSelect) {
             evaluatorSelect.addEventListener('change', function(e) {
                 dashboardState.selectedEvaluator = String(e.target.value || 'All');
-                applyEvaluatorFilter(true);
+                applyDashboardFilters(true);
             });
         }
         setupCompareMenu();
