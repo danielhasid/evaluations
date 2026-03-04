@@ -2,8 +2,8 @@ from typing import Dict, List
 
 import openai
 
+from .dataset_answering import generate_answers_for_dataset as shared_generate_answers_for_dataset
 from .env import require_openai_api_key
-from .logging_utils import log_stage
 
 
 class OpenAIAnswerGenerator:
@@ -31,10 +31,5 @@ def generate_answer(question: str, answer_generator: OpenAIAnswerGenerator) -> s
 
 
 def generate_answers_for_dataset(qa_pairs: list, answer_generator: OpenAIAnswerGenerator) -> list:
-    log_stage(f"\n[LLM] Generating answers for {len(qa_pairs)} questions...")
-    for i, qa_pair in enumerate(qa_pairs, 1):
-        question = qa_pair.get("question", "")
-        log_stage(f"  [{i}/{len(qa_pairs)}] Generating answer for: {question[:60]}...")
-        qa_pair["generated_answer"] = generate_answer(question, answer_generator)
-    log_stage("[OK] Answer generation complete!")
-    return qa_pairs
+    """Backward-compatible passthrough to shared dataset answer generation."""
+    return shared_generate_answers_for_dataset(qa_pairs, answer_generator=answer_generator)

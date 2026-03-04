@@ -8,11 +8,20 @@ _ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 if _ROOT not in _sys.path:
     _sys.path.insert(0, _ROOT)
 
-from core.answering import OpenAIAnswerGenerator, generate_answers_for_dataset
-from core.config import RunConfig, make_run_json_path
-from core.logging_utils import log_stage
-from core.results import display_results, save_initial_results, update_results_with_metrics
-from evaluators.base import BatchEvaluationResult, EvaluatorAdapter
+try:  # package import path (preferred for IDE/static analysis)
+    from .answering import OpenAIAnswerGenerator
+    from .dataset_answering import generate_answers_for_dataset
+    from .config import RunConfig, make_run_json_path
+    from .logging_utils import log_stage
+    from .results import display_results, save_initial_results, update_results_with_metrics
+    from ..evaluators.base import BatchEvaluationResult, EvaluatorAdapter
+except ImportError:  # script execution fallback
+    from core.answering import OpenAIAnswerGenerator
+    from core.dataset_answering import generate_answers_for_dataset
+    from core.config import RunConfig, make_run_json_path
+    from core.logging_utils import log_stage
+    from core.results import display_results, save_initial_results, update_results_with_metrics
+    from evaluators.base import BatchEvaluationResult, EvaluatorAdapter
 
 
 def run_pipeline(config: RunConfig, adapter: EvaluatorAdapter) -> Tuple[list, list, list, str]:
@@ -44,7 +53,11 @@ def run_pipeline(config: RunConfig, adapter: EvaluatorAdapter) -> Tuple[list, li
 
     save_initial_results(qa_pairs, evaluator_type=adapter.evaluator_type, output_filepath=output_json)
 
-    batch: BatchEvaluationResult = adapter.run_batch_evaluation(qa_pairs, selected_metrics=config.metrics)
+    batch: BatchEvaluationResult = adapter.run_batch_evaluation(
+        qa_pairs, 
+        selected_metrics=config.metrics,
+        truths_limit=config.truths_extraction_limit
+    )
     update_results_with_metrics(
         test_cases=batch.test_cases,
         metrics_list=batch.metrics,

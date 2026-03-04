@@ -279,7 +279,7 @@ def _build_rows_html(table_items, all_metric_names, id_prefix=""):
         passed_txt = 'Passed' if row['passed'] else 'Failed'
 
         rows_html += (
-            f'<tr class="border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"'
+            f'<tr class="table-hover-row border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors text-sm cursor-pointer"'
             f' title="{_safe(tooltip_text)}" data-target="{detail_row_id}">'
             f'<td class="py-4 px-4 whitespace-nowrap">'
             f'<span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border {passed_cls}">'
@@ -373,6 +373,11 @@ def _build_per_run_summaries(source_files: list) -> list:
             per_metric_reason = {}
             per_metric_threshold = {}
             per_metric_passed = {}
+            per_metric_verbose_logs = {}
+            per_metric_criteria = {}
+            per_metric_steps = {}
+            per_metric_rubric = {}
+            per_metric_model = {}
             lowest_metric = ""
             lowest_score = 1.0
             lowest_reason = ""
@@ -390,6 +395,11 @@ def _build_per_run_summaries(source_files: list) -> list:
                 per_metric_reason[m_display] = reason
                 per_metric_threshold[m_display] = thr_f
                 per_metric_passed[m_display] = mp
+                per_metric_verbose_logs[m_display] = md.get("verbose_logs", "")
+                per_metric_criteria[m_display] = md.get("criteria", "")
+                per_metric_steps[m_display] = md.get("evaluation_steps", [])
+                per_metric_rubric[m_display] = md.get("rubric", "")
+                per_metric_model[m_display] = md.get("evaluation_model", "")
                 metric_scores_all[m_display].append(score_f)
 
                 if score_f < lowest_score:
@@ -425,6 +435,8 @@ def _build_per_run_summaries(source_files: list) -> list:
                 "question": item.get("question", ""),
                 "generated_answer": item.get("generated_answer", ""),
                 "expected_answer": item.get("expected_answer", ""),
+                "context": item.get("context", ""),
+                "retrieval_context": item.get("retrieval_context", ""),
                 "metadata": item.get("metadata", ""),
                 "timestamp": item.get("timestamp", ""),
                 "status": item.get("status", ""),
@@ -435,6 +447,11 @@ def _build_per_run_summaries(source_files: list) -> list:
                         "reason": per_metric_reason.get(m, ""),
                         "threshold": per_metric_threshold.get(m, None),
                         "passed": per_metric_passed.get(m, None),
+                        "verbose_logs": per_metric_verbose_logs.get(m, ""),
+                        "criteria": per_metric_criteria.get(m, ""),
+                        "evaluation_steps": per_metric_steps.get(m, []),
+                        "rubric": per_metric_rubric.get(m, ""),
+                        "evaluation_model": per_metric_model.get(m, ""),
                     }
                     for m in run_metric_names
                 },
@@ -457,6 +474,8 @@ def _build_per_run_summaries(source_files: list) -> list:
                 "question": row["question"],
                 "generated_answer": row["generated_answer"],
                 "expected_answer": row["expected_answer"],
+                "context": row.get("context", ""),
+                "retrieval_context": row.get("retrieval_context", ""),
                 "metadata": row["metadata"],
                 "timestamp": row["timestamp"],
                 "source_file": row["source_file"],
@@ -515,6 +534,25 @@ def create_dashboard(json_filepath, html_filepath):
     if not runs:
         print("Error: Could not load valid evaluation items from the provided inputs.")
         return
+
+    # Show newest runs first in all run-based views.
+    def _run_sort_key(run_obj: dict) -> datetime:
+        ts = (run_obj.get("timestamp") or "").strip()
+        if ts:
+            try:
+                return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+        name = run_obj.get("filename", "")
+        ts_match = re.search(r'(\d{8}_\d{6})', name)
+        if ts_match:
+            try:
+                return datetime.strptime(ts_match.group(1), "%Y%m%d_%H%M%S")
+            except ValueError:
+                pass
+        return datetime.min
+
+    runs.sort(key=_run_sort_key, reverse=True)
 
     # ── Aggregate stats ───────────────────────────────────────────────────────
     all_metric_names_set = set()
@@ -616,7 +654,7 @@ def create_dashboard(json_filepath, html_filepath):
         result_label = f"{r['passed']}/{r['total']} passed"
 
         runs_table_rows_html += (
-            f'<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer"'
+            f'<tr class="run-row table-hover-row border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer"'
             f' onclick="showDetail({i})">'
             f'<td class="py-3 px-4 text-gray-400 text-sm whitespace-nowrap">{_safe(ts_display)}</td>'
             f'<td class="py-3 px-4">'
@@ -669,6 +707,14 @@ def create_dashboard(json_filepath, html_filepath):
         .nav-item {{ padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; border-radius: 0.375rem; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }}
         .nav-item:hover, .nav-item.active {{ background-color: #1f2128; color: #f3f4f6; }}
         .font-mono {{ font-family: 'Courier New', monospace; }}
+        .table-hover-row {{ transition: background-color 120ms ease, box-shadow 120ms ease; }}
+        .table-hover-row:hover {{ background-color: rgba(71, 85, 105, 0.24) !important; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2); }}
+        /* Brighter text for test-case modal readability */
+        #detail-case-modal .text-gray-500 {{ color: #d1d5db !important; }}
+        #detail-case-modal .text-gray-400 {{ color: #e5e7eb !important; }}
+        #detail-case-modal .text-gray-300 {{ color: #f3f4f6 !important; }}
+        #detail-case-modal .text-gray-200 {{ color: #ffffff !important; }}
+        #detail-case-modal .text-gray-100 {{ color: #ffffff !important; }}
         @media print {{
             aside {{ display: none !important; }}
             body {{ display: block !important; background: #fff !important; color: #000 !important; overflow: visible !important; height: auto !important; }}
@@ -779,11 +825,31 @@ def create_dashboard(json_filepath, html_filepath):
                 </div>
             </div>
 
+            <!-- Regression compare menu -->
+            <div class="glass-panel p-5 mb-6 no-print">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h3 class="text-gray-200 font-semibold text-sm">Compare Regressions</h3>
+                        <p class="text-gray-500 text-xs mt-1">Pick two runs and open a side-by-side regression comparison</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="compare-left-select" class="bg-[#101117] border border-gray-700 rounded px-3 py-2 text-xs text-gray-200 min-w-[220px]"></select>
+                        <span class="text-gray-500 text-xs font-semibold uppercase tracking-wider">vs</span>
+                        <select id="compare-right-select" class="bg-[#101117] border border-gray-700 rounded px-3 py-2 text-xs text-gray-200 min-w-[220px]"></select>
+                        <button id="compare-open-btn"
+                            class="px-4 py-2 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold tracking-wide border border-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Compare
+                        </button>
+                    </div>
+                </div>
+                <p id="compare-menu-hint" class="text-[11px] text-gray-500 mt-3"></p>
+            </div>
+
             <!-- Runs table -->
             <div class="glass-panel p-0 overflow-hidden">
                 <div class="p-5 border-b border-gray-800/50 flex items-center justify-between">
                     <div>
-                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong class="text-white">1 to {total_runs}</strong> of <strong class="text-white">{total_runs}</strong> test run{"s" if total_runs != 1 else ""}</h3>
+                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong id="runs-showing-range" class="text-white">1 to {total_runs}</strong> of <strong class="text-white">{total_runs}</strong> test run{"s" if total_runs != 1 else ""}</h3>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -801,6 +867,18 @@ def create_dashboard(json_filepath, html_filepath):
                             {runs_table_rows_html}
                         </tbody>
                     </table>
+                </div>
+                <div class="px-4 py-3 border-t border-gray-800/60 flex items-center justify-end text-xs text-gray-400">
+                    <div class="flex items-center gap-4">
+                        <span id="runs-range-text">0-0 of 0</span>
+                        <div class="flex items-center gap-1">
+                            <button id="runs-page-first" class="h-7 w-7 rounded border border-gray-700">|&lt;</button>
+                            <button id="runs-page-prev" class="h-7 w-7 rounded border border-gray-700">&lt;</button>
+                            <button id="runs-page-next" class="h-7 w-7 rounded border border-gray-700">&gt;</button>
+                            <button id="runs-page-last" class="h-7 w-7 rounded border border-gray-700">&gt;|</button>
+                        </div>
+                        <span>Page <span id="runs-page-current">1</span> of <span id="runs-page-total">1</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -874,6 +952,10 @@ def create_dashboard(json_filepath, html_filepath):
                 <div class="px-4 py-3 border-b border-gray-800/60 flex items-center justify-between">
                     <div id="detail-testcases-count" class="text-sm text-gray-300">Showing 0 to 0 of 0 test case(s)</div>
                     <div class="flex items-center gap-2 text-xs">
+                        <button id="detail-download-csv" class="h-7 px-3 rounded border border-gray-700 text-gray-200 hover:text-white hover:border-gray-500 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"></path></svg>
+                            Download all as CSV
+                        </button>
                         <button id="detail-sort-toggle" class="h-7 w-7 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500">-</button>
                         <button class="h-7 w-7 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500">...</button>
                         <div class="relative">
@@ -907,8 +989,8 @@ def create_dashboard(json_filepath, html_filepath):
                     <div class="flex items-center gap-3">
                         <span>Rows per page</span>
                         <select id="detail-rows-per-page" class="bg-[#101117] border border-gray-700 rounded px-2 py-1 text-gray-200">
-                            <option value="5">5</option>
-                            <option value="10" selected>10</option>
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
                             <option value="25">25</option>
                         </select>
                     </div>
@@ -924,21 +1006,149 @@ def create_dashboard(json_filepath, html_filepath):
                 </div>
             </div>
 
-            <div id="detail-case-panel" class="glass-panel p-4 mb-6 hidden">
-                <div class="flex items-center justify-between mb-3">
-                    <h4 id="detail-case-panel-title" class="text-gray-200 font-semibold text-sm">Test Case Details</h4>
-                    <button id="detail-case-close" class="text-gray-400 hover:text-white text-xs">Close</button>
+            <div id="detail-case-modal" class="hidden fixed inset-0 z-50">
+                <div id="detail-case-backdrop" class="absolute inset-0 bg-black/70"></div>
+                <div class="relative h-full w-full flex items-start justify-center p-6 overflow-y-auto">
+                    <div class="w-full max-w-[1400px] bg-[#0d0f14] border border-gray-800 rounded-lg shadow-2xl">
+                        <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-widest text-gray-500">Test Case Details</div>
+                                <h4 id="detail-case-panel-title" class="text-gray-200 font-semibold text-sm mt-1">Test Case</h4>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <button id="detail-case-prev" class="px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500">Previous</button>
+                                <button id="detail-case-next" class="px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500">Next</button>
+                                <button id="detail-case-close" class="px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500">Close</button>
+                            </div>
+                        </div>
+                        <div id="detail-case-panel-body" class="p-5"></div>
+                    </div>
                 </div>
-                <div id="detail-case-panel-body" class="text-xs text-gray-300 space-y-3"></div>
             </div>
 
             <!-- Analysis Summary -->
             <div id="detail-analysis-summary" class="glass-panel p-6 mb-6 hidden">
-                <h3 class="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Analysis Summary</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-gray-400 text-xs font-semibold uppercase tracking-widest">Analysis Summary</h3>
+                    <button id="detail-analysis-toggle" class="text-xs text-gray-400 hover:text-white">Collapse</button>
+                </div>
                 <div id="detail-analysis-summary-body" class="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap"></div>
             </div>
 
         </div><!-- /view-detail -->
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             VIEW: REGRESSION COMPARE (hidden until compare is selected)
+        ════════════════════════════════════════════════════════════════════ -->
+        <div id="view-compare" class="hidden p-8">
+            <button onclick="showRuns()"
+                class="flex items-center gap-2 text-gray-400 hover:text-white text-sm font-medium mb-6 transition-colors cursor-pointer no-print">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Test Runs
+            </button>
+
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h1 class="text-white font-bold text-xl tracking-tight">Regression Testing</h1>
+                    <p id="compare-title" class="text-gray-500 text-xs mt-1">Compare two selected runs</p>
+                </div>
+                <div id="compare-summary-chip" class="text-xs px-2.5 py-1 rounded border border-gray-700 text-gray-300 bg-[#15161b]">Waiting for selection</div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                <div class="glass-panel p-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h3 id="compare-left-name" class="text-violet-400 text-sm font-semibold font-mono truncate"></h3>
+                        <span id="compare-left-evaluator" class="text-[10px] px-2 py-0.5 rounded border border-violet-500/30 bg-violet-500/10 text-violet-300"></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Pass rate</div>
+                            <div id="compare-left-pass-rate" class="text-white text-lg font-bold mt-1">-</div>
+                        </div>
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Passed</div>
+                            <div id="compare-left-passed" class="text-emerald-400 text-lg font-bold mt-1">-</div>
+                        </div>
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Failed</div>
+                            <div id="compare-left-failed" class="text-rose-400 text-lg font-bold mt-1">-</div>
+                        </div>
+                    </div>
+                    <div id="compare-left-metrics" class="space-y-2"></div>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h3 id="compare-right-name" class="text-cyan-400 text-sm font-semibold font-mono truncate"></h3>
+                        <span id="compare-right-evaluator" class="text-[10px] px-2 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300"></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Pass rate</div>
+                            <div id="compare-right-pass-rate" class="text-white text-lg font-bold mt-1">-</div>
+                        </div>
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Passed</div>
+                            <div id="compare-right-passed" class="text-emerald-400 text-lg font-bold mt-1">-</div>
+                        </div>
+                        <div class="bg-[#101117] border border-gray-800 rounded p-3">
+                            <div class="text-gray-500 text-[10px] uppercase">Failed</div>
+                            <div id="compare-right-failed" class="text-rose-400 text-lg font-bold mt-1">-</div>
+                        </div>
+                    </div>
+                    <div id="compare-right-metrics" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-0 overflow-hidden">
+                <div class="p-4 border-b border-gray-800/60 flex items-center justify-between">
+                    <h3 class="text-gray-200 text-sm font-medium">Matched Test Cases</h3>
+                    <div class="flex items-center gap-4">
+                        <label class="inline-flex items-center gap-2 text-[11px] text-gray-400 cursor-pointer select-none">
+                            <input id="compare-filter-regressions" type="checkbox" class="accent-rose-500">
+                            Only Regressions
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-[11px] text-gray-400 cursor-pointer select-none">
+                            <input id="compare-filter-changed" type="checkbox" class="accent-violet-500">
+                            Only Changed Cases
+                        </label>
+                        <span id="compare-cases-count" class="text-[11px] text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-[#15161b] border-b border-gray-800/60">
+                            <tr class="text-[11px] text-gray-500 uppercase tracking-wider">
+                                <th class="py-3 px-4 font-semibold">Test Case</th>
+                                <th class="py-3 px-4 font-semibold">Left Status</th>
+                                <th class="py-3 px-4 font-semibold">Right Status</th>
+                                <th class="py-3 px-4 font-semibold">Primary Metric Δ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="compare-cases-body"></tbody>
+                    </table>
+                </div>
+                <div id="compare-case-panel" class="hidden border-t border-gray-800/60 bg-[#101117]">
+                    <div class="px-4 py-3 border-b border-gray-800/60 flex items-center justify-between">
+                        <h4 id="compare-case-title" class="text-gray-200 text-sm font-semibold">Test Case Details</h4>
+                        <button id="compare-case-close" class="text-xs text-gray-400 hover:text-white">Close</button>
+                    </div>
+                    <div class="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-[10px] uppercase tracking-widest text-violet-300 mb-2">Left Run</div>
+                            <div id="compare-case-left" class="space-y-3"></div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] uppercase tracking-widest text-cyan-300 mb-2">Right Run</div>
+                            <div id="compare-case-right" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /view-compare -->
 
     </main>
 
@@ -950,10 +1160,10 @@ def create_dashboard(json_filepath, html_filepath):
         function cleanSummaryMarkdown(text) {{
             if (!text) return '';
             return text
-                .split('\\n')
+                .split(String.fromCharCode(10))
                 .map(function(line) {{
                     let s = line.trim();
-                    s = s.replace(/^#{1,6}\\s*/, '');
+                    s = s.replace(/^#{{1,6}}\\s*/, '');
                     s = s.replace(/^[-*]\\s+/, '');
                     s = s.replace(/^>\\s+/, '');
                     s = s.replace(/\\*\\*(.*?)\\*\\*/g, '$1');
@@ -961,13 +1171,17 @@ def create_dashboard(json_filepath, html_filepath):
                     s = s.replace(/`([^`]+)`/g, '$1');
                     return s;
                 }})
-                .join('\\n')
+                .join(String.fromCharCode(10))
                 .trim();
         }}
 
         // ── Runs list chart ───────────────────────────────────────────────────
-        const runsCtx = document.getElementById('runsChart').getContext('2d');
-        const runsChart = new Chart(runsCtx, {{
+        let runsChart = null;
+        try {{
+            const runsChartEl = document.getElementById('runsChart');
+            if (runsChartEl && typeof Chart !== 'undefined') {{
+                const runsCtx = runsChartEl.getContext('2d');
+                runsChart = new Chart(runsCtx, {{
             type: 'line',
             data: {{
                 labels: {json.dumps(run_labels)},
@@ -999,17 +1213,39 @@ def create_dashboard(json_filepath, html_filepath):
                 }}
             }}
         }});
+            }} else if (runsChartEl && typeof Chart === 'undefined') {{
+                console.warn('Chart.js failed to load (check CDN/network). Open via http:// for best results.');
+            }}
+        }} catch (e) {{
+            console.error('Chart init failed:', e);
+        }}
 
         // ── Detail donut chart instance ───────────────────────────────────────
         let detailDonut = null;
         const testCaseState = {{
             run: null,
             cases: [],
+            sortedCases: [],
             page: 1,
-            pageSize: 10,
+            pageSize: 5,
             sortKey: 'name',
             sortDir: 'asc',
             columns: {{ name: true, status: true, input: true, output: true }},
+            selectedCaseName: '',
+            selectedCaseIndex: -1,
+        }};
+        const runsTableState = {{
+            page: 1,
+            pageSize: 5,
+        }};
+        const compareState = {{
+            leftIdx: 0,
+            rightIdx: RUNS_DATA.length > 1 ? 1 : 0,
+            onlyRegressions: false,
+            onlyChanged: false,
+            leftCaseMap: new Map(),
+            rightCaseMap: new Map(),
+            selectedCaseName: '',
         }};
 
         function escapeHtml(value) {{
@@ -1022,6 +1258,28 @@ def create_dashboard(json_filepath, html_filepath):
         function truncateText(value, maxLen) {{
             const s = String(value || '');
             return s.length > maxLen ? (s.slice(0, maxLen - 3) + '...') : s;
+        }}
+
+        function csvEscape(value) {{
+            const s = String(value == null ? '' : value);
+            if (/[",\\n\\r]/.test(s)) {{
+                return '"' + s.replace(/"/g, '""') + '"';
+            }}
+            return s;
+        }}
+
+        function formatVerboseLogs(logValue) {{
+            if (Array.isArray(logValue)) {{
+                return escapeHtml(logValue.join(String.fromCharCode(10)));
+            }}
+            if (logValue && typeof logValue === 'object') {{
+                try {{
+                    return escapeHtml(JSON.stringify(logValue, null, 2));
+                }} catch (e) {{
+                    return escapeHtml(String(logValue));
+                }}
+            }}
+            return escapeHtml(String(logValue || ''));
         }}
 
         function statusOrder(status) {{
@@ -1064,6 +1322,448 @@ def create_dashboard(json_filepath, html_filepath):
             return getCasesFromLegacyRows(run);
         }}
 
+        function getRunOptionLabel(run, idx) {{
+            const ts = run.timestamp ? run.timestamp.slice(0, 16).replace('T', ' ') : run.label;
+            return '#' + (idx + 1) + ' · ' + ts + ' · ' + run.filename;
+        }}
+
+        function downloadCurrentRunCsv() {{
+            if (!testCaseState.run) return;
+            const cases = getRunTestCases(testCaseState.run);
+            const metricNames = Array.isArray(testCaseState.run.metric_names)
+                ? testCaseState.run.metric_names
+                : Array.from(new Set(cases.flatMap(function(c) {{
+                    return Object.keys(c.evaluation_metrics || {{}});
+                }}))).sort();
+
+            const baseHeaders = [
+                'Name',
+                'Input',
+                'Actual Output',
+                'Expected Output',
+                'Status',
+                'Context',
+                'Retrieval Context',
+                'Tools Called',
+                'Expected Tools',
+                'Comments',
+                'Additional Metadata',
+                'Run Duration',
+                'Error',
+                'Skipped',
+            ];
+
+            const metricHeaders = [];
+            metricNames.forEach(function(metricName) {{
+                metricHeaders.push(metricName + ' Score');
+                metricHeaders.push(metricName + ' Reason');
+                metricHeaders.push(metricName + ' Threshold');
+                metricHeaders.push(metricName + ' Success');
+                metricHeaders.push(metricName + ' Error');
+                metricHeaders.push(metricName + ' Strict Mode');
+                metricHeaders.push(metricName + ' Evaluation Model');
+            }});
+
+            const headers = baseHeaders.concat(metricHeaders);
+            const rows = [headers];
+
+            cases.forEach(function(caseItem) {{
+                const contextText = Array.isArray(caseItem.context)
+                    ? caseItem.context.join(' | ')
+                    : (caseItem.context || '');
+                const retrievalContextText = Array.isArray(caseItem.retrieval_context)
+                    ? caseItem.retrieval_context.join(' | ')
+                    : (caseItem.retrieval_context || '');
+                const baseRow = [
+                    caseItem.name || '',
+                    caseItem.question || '',
+                    caseItem.generated_answer || '',
+                    caseItem.expected_answer || '',
+                    String(caseItem.status || '').toLowerCase() === 'failed' ? 'Failed' : 'Passed',
+                    contextText,
+                    retrievalContextText,
+                    'N/A',
+                    'N/A',
+                    '',
+                    caseItem.metadata || '',
+                    'N/A',
+                    '',
+                    'false',
+                ];
+
+                const metricRow = [];
+                metricNames.forEach(function(metricName) {{
+                    const metric = (caseItem.evaluation_metrics || {{}})[metricName] || {{}};
+                    metricRow.push(metric.score == null ? 'N/A' : metric.score);
+                    metricRow.push(metric.reason || '');
+                    metricRow.push(metric.threshold == null ? 'N/A' : metric.threshold);
+                    metricRow.push(metric.passed == null ? 'N/A' : String(!!metric.passed));
+                    metricRow.push(metric.error == null ? 'None' : String(metric.error));
+                    metricRow.push(metric.strict_mode == null ? 'false' : String(!!metric.strict_mode));
+                    metricRow.push(metric.evaluation_model || 'N/A');
+                }});
+
+                rows.push(baseRow.concat(metricRow));
+            }});
+
+            const csv = rows.map(function(row) {{
+                return row.map(csvEscape).join(',');
+            }}).join(String.fromCharCode(13, 10));
+
+            const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const safeName = (testCaseState.run.filename || 'test_run').replace(/\\.json$/i, '');
+            link.href = url;
+            link.download = 'end_to_end_test_run_' + safeName + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }}
+
+        function statusBadgeClass(status) {{
+            return String(status || '').toLowerCase() === 'failed'
+                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+        }}
+
+        function normalizeStatusKind(status) {{
+            const s = String(status || '').toLowerCase();
+            if (!s || s === 'missing') return 'missing';
+            if (s === 'failed' || s === 'fail' || s === 'error') return 'fail';
+            if (s === 'success' || s === 'passed' || s === 'pass' || s === 'ok') return 'pass';
+            return 'unknown';
+        }}
+
+        function metricCardHtml(metricName, value, color) {{
+            const pct = Math.max(0, Math.min(100, Math.round((Number(value) || 0) * 100)));
+            return '<div class="rounded border border-gray-800 p-2 bg-[#101117]">' +
+                '<div class="flex items-center justify-between text-xs">' +
+                '<span class="text-gray-300">' + escapeHtml(metricName) + '</span>' +
+                '<span class="font-mono text-white">' + Number(value || 0).toFixed(3) + '</span>' +
+                '</div>' +
+                '<div class="mt-2 h-1.5 rounded bg-gray-800 overflow-hidden">' +
+                '<div class="h-full rounded" style="width:' + pct + '%;background:' + escapeHtml(color || '#6b7280') + '"></div>' +
+                '</div>' +
+                '</div>';
+        }}
+
+        function metricDetailsHtml(metrics) {{
+            const entries = Object.entries(metrics || {{}});
+            if (!entries.length) {{
+                return '<div class="text-xs text-gray-500">No metric details available.</div>';
+            }}
+            return entries.map(function(entry) {{
+                const mName = entry[0];
+                const mData = entry[1] || {{}};
+                const passed = mData.passed === true ? 'true' : (mData.passed === false ? 'false' : 'n/a');
+                return '<div class="rounded border border-gray-800/60 p-2">' +
+                    '<div class="flex items-center justify-between text-xs">' +
+                    '<span class="text-gray-200">' + escapeHtml(mName) + '</span>' +
+                    '<span class="font-mono text-gray-300">' + Number(mData.score || 0).toFixed(3) + '</span>' +
+                    '</div>' +
+                    '<div class="mt-1 text-[10px] text-gray-500">passed: ' + escapeHtml(passed) + '</div>' +
+                    '<div class="mt-1 text-xs text-gray-400 whitespace-pre-wrap">' + escapeHtml(mData.reason || '') + '</div>' +
+                    '</div>';
+            }}).join('');
+        }}
+
+        function renderCompareCaseColumn(containerId, caseItem) {{
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            if (!caseItem) {{
+                el.innerHTML = '<div class="rounded border border-gray-800 p-3 text-xs text-gray-500">This test case is missing in this run.</div>';
+                return;
+            }}
+
+            const metricLabel = caseItem.metric_kind ? (caseItem.metric_kind + ': ' + (caseItem.metric || 'n/a')) : (caseItem.metric || 'n/a');
+            const scoreText = caseItem.metric_score != null ? Number(caseItem.metric_score).toFixed(3) : 'n/a';
+
+            el.innerHTML =
+                '<div class="rounded border border-gray-800 p-3 bg-[#0f1015]">' +
+                    '<div class="flex items-center justify-between mb-2">' +
+                        '<span class="px-2 py-0.5 rounded border text-[11px] ' + statusBadgeClass(caseItem.status || 'Unknown') + '">' + escapeHtml(caseItem.status || 'Unknown') + '</span>' +
+                        '<span class="text-[10px] text-gray-500 font-mono">' + escapeHtml(caseItem.name || '') + '</span>' +
+                    '</div>' +
+                    '<div class="text-[11px] text-gray-500">Primary Metric</div>' +
+                    '<div class="text-xs text-gray-300">' + escapeHtml(metricLabel) + ' · ' + escapeHtml(scoreText) + '</div>' +
+                    '<div class="text-[11px] text-gray-500 mt-2">Input</div>' +
+                    '<div class="text-xs text-gray-200 whitespace-pre-wrap">' + escapeHtml(caseItem.question || '') + '</div>' +
+                    '<div class="text-[11px] text-gray-500 mt-2">Actual Output</div>' +
+                    '<div class="text-xs text-gray-300 whitespace-pre-wrap">' + escapeHtml(caseItem.generated_answer || '') + '</div>' +
+                    '<div class="text-[11px] text-gray-500 mt-2">Expected Output</div>' +
+                    '<div class="text-xs text-gray-300 whitespace-pre-wrap">' + escapeHtml(caseItem.expected_answer || '') + '</div>' +
+                    '<div class="text-[11px] text-gray-500 mt-2">Metadata</div>' +
+                    '<div class="text-xs text-gray-400">' + escapeHtml(caseItem.metadata || '') + '</div>' +
+                    '<div class="text-[11px] text-gray-500 mt-2">Metrics</div>' +
+                    '<div class="space-y-2 mt-1">' + metricDetailsHtml(caseItem.evaluation_metrics || {{}}) + '</div>' +
+                '</div>';
+        }}
+
+        function openCompareCaseDetails(caseName) {{
+            const panel = document.getElementById('compare-case-panel');
+            const title = document.getElementById('compare-case-title');
+            if (!panel || !title) return;
+
+            if (compareState.selectedCaseName === caseName && !panel.classList.contains('hidden')) {{
+                closeCompareCaseDetails();
+                return;
+            }}
+
+            compareState.selectedCaseName = caseName || '';
+            title.textContent = (caseName || 'Test Case') + ' · Details';
+            renderCompareCaseColumn('compare-case-left', compareState.leftCaseMap.get(caseName));
+            renderCompareCaseColumn('compare-case-right', compareState.rightCaseMap.get(caseName));
+            panel.classList.remove('hidden');
+        }}
+
+        function closeCompareCaseDetails() {{
+            const panel = document.getElementById('compare-case-panel');
+            if (panel) panel.classList.add('hidden');
+            compareState.selectedCaseName = '';
+        }}
+
+        function renderCompareRunSide(prefix, run) {{
+            document.getElementById(prefix + '-name').textContent = run.filename;
+            document.getElementById(prefix + '-evaluator').textContent = run.evaluator_type || 'Unknown';
+            document.getElementById(prefix + '-pass-rate').textContent = Number(run.pass_rate || 0).toFixed(1) + '%';
+            document.getElementById(prefix + '-passed').textContent = String(run.passed || 0);
+            document.getElementById(prefix + '-failed').textContent = String(run.failed || 0);
+
+            const metricsEl = document.getElementById(prefix + '-metrics');
+            metricsEl.innerHTML = '';
+            run.metric_names.forEach(function(name) {{
+                const avg = run.metric_avgs[name] != null ? run.metric_avgs[name] : 0;
+                const color = run.metric_colors[name] || '#6b7280';
+                metricsEl.innerHTML += metricCardHtml(name, avg, color);
+            }});
+        }}
+
+        function renderCompareCases(leftRun, rightRun) {{
+            const body = document.getElementById('compare-cases-body');
+            const leftCases = getRunTestCases(leftRun);
+            const rightCases = getRunTestCases(rightRun);
+
+            const leftMap = new Map();
+            leftCases.forEach(function(item) {{ leftMap.set(item.name, item); }});
+            const rightMap = new Map();
+            rightCases.forEach(function(item) {{ rightMap.set(item.name, item); }});
+            compareState.leftCaseMap = leftMap;
+            compareState.rightCaseMap = rightMap;
+
+            const names = Array.from(new Set([].concat(leftCases.map(function(c) {{ return c.name; }}), rightCases.map(function(c) {{ return c.name; }})))).sort();
+            let changedCount = 0;
+            let regressionCount = 0;
+
+            const rowsHtml = names.map(function(name) {{
+                const l = leftMap.get(name);
+                const r = rightMap.get(name);
+                const lStatus = l ? (l.status || 'Unknown') : 'Missing';
+                const rStatus = r ? (r.status || 'Unknown') : 'Missing';
+                const lScore = l ? Number(l.metric_score || 0) : null;
+                const rScore = r ? Number(r.metric_score || 0) : null;
+                const lKind = normalizeStatusKind(lStatus);
+                const rKind = normalizeStatusKind(rStatus);
+
+                let deltaText = 'n/a';
+                let deltaCls = 'text-gray-500';
+                if (lScore != null && rScore != null) {{
+                    const delta = rScore - lScore;
+                    deltaText = (delta >= 0 ? '+' : '') + delta.toFixed(3);
+                    deltaCls = delta > 0 ? 'text-emerald-400' : (delta < 0 ? 'text-rose-400' : 'text-gray-300');
+                }}
+
+                const changed = lKind !== rKind;
+                const isRegression = (lKind === 'pass' && rKind === 'fail');
+                if (changed) changedCount += 1;
+                if (isRegression) regressionCount += 1;
+
+                if (compareState.onlyChanged && !changed) return '';
+                if (compareState.onlyRegressions && !isRegression) return '';
+
+                return '<tr class="table-hover-row border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer" data-case-name="' + escapeHtml(name) + '">' +
+                    '<td class="py-3 px-4 text-gray-300 font-mono text-xs">' + escapeHtml(name) + '</td>' +
+                    '<td class="py-3 px-4"><span class="px-2 py-0.5 rounded border text-[11px] ' + statusBadgeClass(lStatus) + '">' + escapeHtml(lStatus) + '</span></td>' +
+                    '<td class="py-3 px-4"><span class="px-2 py-0.5 rounded border text-[11px] ' + statusBadgeClass(rStatus) + '">' + escapeHtml(rStatus) + '</span></td>' +
+                    '<td class="py-3 px-4 font-mono text-xs ' + deltaCls + '">' + escapeHtml(deltaText) + '</td>' +
+                    '</tr>';
+            }}).join('');
+
+            body.innerHTML = rowsHtml || '<tr><td colspan="4" class="py-6 px-4 text-center text-xs text-gray-500">No test cases match the selected filters.</td></tr>';
+            body.querySelectorAll('tr[data-case-name]').forEach(function(rowEl) {{
+                rowEl.addEventListener('click', function() {{
+                    const caseName = rowEl.getAttribute('data-case-name') || '';
+                    openCompareCaseDetails(caseName);
+                }});
+            }});
+
+            const shownCount = body.querySelectorAll('tr').length;
+            document.getElementById('compare-cases-count').textContent =
+                shownCount + ' shown / ' + names.length + ' total · ' + regressionCount + ' regressions · ' + changedCount + ' status changes';
+            return {{ changedCount: changedCount, regressionCount: regressionCount, shownCount: shownCount, totalCount: names.length }};
+        }}
+
+        function renderActiveCompare() {{
+            const leftRun = RUNS_DATA[compareState.leftIdx];
+            const rightRun = RUNS_DATA[compareState.rightIdx];
+            if (!leftRun || !rightRun) return;
+
+            const compareStats = renderCompareCases(leftRun, rightRun);
+            const chip = document.getElementById('compare-summary-chip');
+            chip.textContent =
+                compareStats.regressionCount + ' regressions · ' + compareStats.changedCount + ' changes';
+            chip.className = compareStats.regressionCount > 0
+                ? 'text-xs px-2.5 py-1 rounded border border-rose-500/40 text-rose-300 bg-rose-500/10'
+                : 'text-xs px-2.5 py-1 rounded border border-emerald-500/40 text-emerald-300 bg-emerald-500/10';
+        }}
+
+        function showCompare(leftIdx, rightIdx) {{
+            const leftRun = RUNS_DATA[leftIdx];
+            const rightRun = RUNS_DATA[rightIdx];
+            if (!leftRun || !rightRun) return;
+
+            compareState.leftIdx = leftIdx;
+            compareState.rightIdx = rightIdx;
+
+            document.getElementById('view-runs').classList.add('hidden');
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-compare').classList.remove('hidden');
+
+            document.getElementById('compare-title').textContent =
+                'Comparing ' + leftRun.label + ' vs ' + rightRun.label;
+
+            renderCompareRunSide('compare-left', leftRun);
+            renderCompareRunSide('compare-right', rightRun);
+            closeCompareCaseDetails();
+            renderActiveCompare();
+        }}
+
+        function showCompareFromSelectors() {{
+            const leftEl = document.getElementById('compare-left-select');
+            const rightEl = document.getElementById('compare-right-select');
+            if (!leftEl || !rightEl) return;
+
+            const leftIdx = Number(leftEl.value);
+            const rightIdx = Number(rightEl.value);
+            if (leftIdx === rightIdx) {{
+                const hint = document.getElementById('compare-menu-hint');
+                hint.textContent = 'Choose two different runs to compare.';
+                return;
+            }}
+            showCompare(leftIdx, rightIdx);
+        }}
+
+        function setupCompareMenu() {{
+            const leftEl = document.getElementById('compare-left-select');
+            const rightEl = document.getElementById('compare-right-select');
+            const openBtn = document.getElementById('compare-open-btn');
+            const hint = document.getElementById('compare-menu-hint');
+            if (!leftEl || !rightEl || !openBtn || !hint) return;
+
+            leftEl.innerHTML = '';
+            rightEl.innerHTML = '';
+            RUNS_DATA.forEach(function(run, idx) {{
+                const optionLabel = getRunOptionLabel(run, idx);
+                leftEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
+                rightEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
+            }});
+
+            leftEl.value = String(compareState.leftIdx);
+            rightEl.value = String(compareState.rightIdx);
+
+            if (RUNS_DATA.length < 2) {{
+                openBtn.disabled = true;
+                hint.textContent = 'Need at least 2 runs to enable compare mode.';
+                return;
+            }}
+
+            openBtn.disabled = false;
+            hint.textContent = 'Tip: compare newest run against a baseline run to catch regressions fast.';
+            openBtn.addEventListener('click', showCompareFromSelectors);
+
+            const onlyRegressions = document.getElementById('compare-filter-regressions');
+            const onlyChanged = document.getElementById('compare-filter-changed');
+            if (onlyRegressions) {{
+                onlyRegressions.checked = compareState.onlyRegressions;
+                onlyRegressions.addEventListener('change', function(e) {{
+                    compareState.onlyRegressions = !!e.target.checked;
+                    renderActiveCompare();
+                }});
+            }}
+            if (onlyChanged) {{
+                onlyChanged.checked = compareState.onlyChanged;
+                onlyChanged.addEventListener('change', function(e) {{
+                    compareState.onlyChanged = !!e.target.checked;
+                    closeCompareCaseDetails();
+                    renderActiveCompare();
+                }});
+            }}
+
+            const compareCloseBtn = document.getElementById('compare-case-close');
+            if (compareCloseBtn) {{
+                compareCloseBtn.addEventListener('click', closeCompareCaseDetails);
+            }}
+        }}
+
+        function renderRunsTablePage() {{
+            const rows = Array.from(document.querySelectorAll('tr.run-row'));
+            const total = rows.length;
+            const totalPages = Math.max(1, Math.ceil(total / runsTableState.pageSize));
+            if (runsTableState.page > totalPages) runsTableState.page = totalPages;
+            if (runsTableState.page < 1) runsTableState.page = 1;
+
+            const start = (runsTableState.page - 1) * runsTableState.pageSize;
+            const end = Math.min(start + runsTableState.pageSize, total);
+
+            rows.forEach(function(row, idx) {{
+                row.style.display = (idx >= start && idx < end) ? '' : 'none';
+            }});
+
+            const rangeText = document.getElementById('runs-range-text');
+            if (rangeText) {{
+                rangeText.textContent = (total === 0 ? '0-0' : (start + 1) + '-' + end) + ' of ' + total;
+            }}
+            const showingRange = document.getElementById('runs-showing-range');
+            if (showingRange) {{
+                showingRange.textContent = (total === 0 ? '0 to 0' : (start + 1) + ' to ' + end);
+            }}
+            const pageCur = document.getElementById('runs-page-current');
+            if (pageCur) pageCur.textContent = String(runsTableState.page);
+            const pageTotal = document.getElementById('runs-page-total');
+            if (pageTotal) pageTotal.textContent = String(totalPages);
+        }}
+
+        function setupRunsTablePagination() {{
+            const first = document.getElementById('runs-page-first');
+            const prev = document.getElementById('runs-page-prev');
+            const next = document.getElementById('runs-page-next');
+            const last = document.getElementById('runs-page-last');
+            if (!first || !prev || !next || !last) return;
+
+            first.addEventListener('click', function() {{
+                runsTableState.page = 1;
+                renderRunsTablePage();
+            }});
+            prev.addEventListener('click', function() {{
+                runsTableState.page = Math.max(1, runsTableState.page - 1);
+                renderRunsTablePage();
+            }});
+            next.addEventListener('click', function() {{
+                const totalRows = document.querySelectorAll('tr.run-row').length;
+                const totalPages = Math.max(1, Math.ceil(totalRows / runsTableState.pageSize));
+                runsTableState.page = Math.min(totalPages, runsTableState.page + 1);
+                renderRunsTablePage();
+            }});
+            last.addEventListener('click', function() {{
+                const totalRows = document.querySelectorAll('tr.run-row').length;
+                runsTableState.page = Math.max(1, Math.ceil(totalRows / runsTableState.pageSize));
+                renderRunsTablePage();
+            }});
+
+            renderRunsTablePage();
+        }}
+
         function applyColumnVisibility() {{
             const map = {{
                 name: 'col-head-name',
@@ -1080,35 +1780,142 @@ def create_dashboard(json_filepath, html_filepath):
             }});
         }}
 
-        function renderCaseDetails(caseItem) {{
-            const panel = document.getElementById('detail-case-panel');
+        function closeCaseModal() {{
+            const modal = document.getElementById('detail-case-modal');
+            if (modal) modal.classList.add('hidden');
+            testCaseState.selectedCaseName = '';
+            testCaseState.selectedCaseIndex = -1;
+        }}
+
+        function openCaseModalByIndex(caseIdx) {{
+            const modal = document.getElementById('detail-case-modal');
             const title = document.getElementById('detail-case-panel-title');
             const body = document.getElementById('detail-case-panel-body');
-            title.textContent = caseItem.name + ' Details';
+            const prevBtn = document.getElementById('detail-case-prev');
+            const nextBtn = document.getElementById('detail-case-next');
+            if (!modal || !title || !body) return;
 
-            let metricHtml = '<div class=\"space-y-1\">';
+            const cases = testCaseState.sortedCases || [];
+            const idx = Number(caseIdx);
+            if (!cases.length || Number.isNaN(idx) || idx < 0 || idx >= cases.length) return;
+
+            const caseItem = cases[idx] || {{}};
+            testCaseState.selectedCaseIndex = idx;
+            testCaseState.selectedCaseName = caseItem.name || '';
+            title.textContent = (caseItem.name || 'Test Case') + ' · Details';
+
+            const statusCls = String(caseItem.status || '').toLowerCase() === 'failed'
+                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+
             const metricEntries = Object.entries(caseItem.evaluation_metrics || {{}});
-            if (!metricEntries.length) {{
-                metricHtml += '<div class=\"text-gray-500\">No metric details available.</div>';
-            }} else {{
-                metricEntries.forEach(function(entry) {{
+            const metricsHtml = metricEntries.length
+                ? metricEntries.map(function(entry) {{
                     const metricName = entry[0];
                     const metric = entry[1] || {{}};
-                    metricHtml += '<div class=\"rounded border border-gray-800/60 p-2\">' +
-                        '<div class=\"flex items-center justify-between\"><span class=\"text-gray-200\">' + escapeHtml(metricName) + '</span>' +
-                        '<span class=\"text-gray-300\">' + Number(metric.score || 0).toFixed(3) + '</span></div>' +
-                        '<div class=\"text-gray-500 mt-1\">' + escapeHtml(metric.reason || '') + '</div></div>';
-                }});
-            }}
-            metricHtml += '</div>';
+                    const passed = metric.passed === true ? 'success' : (metric.passed === false ? 'failed' : 'n/a');
+                    const threshold = metric.threshold == null ? 'n/a' : Number(metric.threshold).toFixed(3);
+                    return '<div class=\"rounded border border-gray-800/70 bg-[#0f1117] p-3\">' +
+                        '<div class=\"flex items-center justify-between gap-3\">' +
+                            '<div class=\"text-sm text-gray-200\">' + escapeHtml(metricName) + '</div>' +
+                            '<div class=\"text-sm font-mono text-gray-100\">' + Number(metric.score || 0).toFixed(3) + '</div>' +
+                        '</div>' +
+                        '<div class=\"mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-wider\">' +
+                            '<span class=\"px-2 py-0.5 rounded border border-gray-700 text-gray-400\">threshold: ' + escapeHtml(threshold) + '</span>' +
+                            '<span class=\"px-2 py-0.5 rounded border border-gray-700 text-gray-400\">status: ' + escapeHtml(passed) + '</span>' +
+                        '</div>' +
+                        '<div class=\"mt-2 text-xs text-gray-400 whitespace-pre-wrap\">' + escapeHtml(metric.reason || '') + '</div>' +
+                    '</div>';
+                }}).join('')
+                : '<div class=\"text-xs text-gray-500\">No metric details available.</div>';
+
+            const verboseLogsHtml = metricEntries.length
+                ? metricEntries.map(function(entry, metricIdx) {{
+                    const metricName = entry[0];
+                    const metric = entry[1] || {{}};
+                    const verboseRaw = metric.verbose_logs;
+                    const criteria = metric.criteria || '';
+                    const steps = metric.evaluation_steps;
+                    const rubric = metric.rubric || '';
+                    const model = metric.evaluation_model || '';
+                    const verboseId = 'metric-verbose-' + idx + '-' + metricIdx;
+                    let details = '';
+                    if (criteria) {{
+                        details += '<div><div class=\"text-gray-500\">Criteria:</div><div class=\"text-gray-300 mt-1 whitespace-pre-wrap\">' + escapeHtml(criteria) + '</div></div>';
+                    }}
+                    if (Array.isArray(steps) && steps.length) {{
+                        details += '<div><div class=\"text-gray-500\">Evaluation Steps:</div><div class=\"text-gray-300 mt-1 whitespace-pre-wrap\">' + escapeHtml(steps.join(String.fromCharCode(10))) + '</div></div>';
+                    }}
+                    if (rubric) {{
+                        details += '<div><div class=\"text-gray-500\">Rubric:</div><div class=\"text-gray-300 mt-1 whitespace-pre-wrap\">' + escapeHtml(typeof rubric === 'string' ? rubric : JSON.stringify(rubric, null, 2)) + '</div></div>';
+                    }}
+                    if (model) {{
+                        details += '<div><div class=\"text-gray-500\">Evaluation Model:</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(model) + '</div></div>';
+                    }}
+                    if (verboseRaw) {{
+                        details += '<div><div class=\"text-gray-500\">Verbose Logs:</div><pre class=\"mt-1 text-gray-300 whitespace-pre-wrap font-mono text-[11px]\">' + formatVerboseLogs(verboseRaw) + '</pre></div>';
+                    }}
+                    if (!details) {{
+                        details = '<div class=\"text-gray-500\">Verbose logs were not captured for this run. Re-run evaluation to populate this section.</div>';
+                    }}
+                    return '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\">' +
+                        '<div class=\"flex items-center justify-between gap-3\">' +
+                            '<div class=\"text-xs text-gray-200\">' + escapeHtml(metricName) + '</div>' +
+                            '<button class=\"metric-verbose-toggle text-[11px] text-gray-400 hover:text-white\" data-target=\"' + verboseId + '\">Show verbose logs</button>' +
+                        '</div>' +
+                        '<div id=\"' + verboseId + '\" class=\"hidden mt-2 rounded border border-gray-800/60 bg-[#0c0e13] p-2 text-[11px] space-y-2\">' + details + '</div>' +
+                    '</div>';
+                }}).join('')
+                : '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3 text-xs text-gray-500\">Verbose logs are not available.</div>';
 
             body.innerHTML =
-                '<div><span class=\"text-gray-500\">Status:</span> ' + escapeHtml(caseItem.status) + '</div>' +
-                '<div><span class=\"text-gray-500\">Input:</span><div class=\"mt-1 text-gray-200 whitespace-pre-wrap\">' + escapeHtml(caseItem.question) + '</div></div>' +
-                '<div><span class=\"text-gray-500\">Actual Output:</span><div class=\"mt-1 text-gray-200 whitespace-pre-wrap\">' + escapeHtml(caseItem.generated_answer) + '</div></div>' +
-                '<div><span class=\"text-gray-500\">Expected Answer:</span><div class=\"mt-1 text-gray-200 whitespace-pre-wrap\">' + escapeHtml(caseItem.expected_answer) + '</div></div>' +
-                '<div><span class=\"text-gray-500\">Metrics:</span>' + metricHtml + '</div>';
-            panel.classList.remove('hidden');
+                '<div class=\"grid grid-cols-1 xl:grid-cols-3 gap-5\">' +
+                    '<div class=\"xl:col-span-1 space-y-3\">' +
+                        '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\"><div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-1\">Input Text</div><div class=\"text-xs text-gray-200 whitespace-pre-wrap\">' + escapeHtml(caseItem.question || '') + '</div></div>' +
+                        '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\"><div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-1\">Actual Output</div><div class=\"text-xs text-gray-300 whitespace-pre-wrap\">' + escapeHtml(caseItem.generated_answer || '') + '</div></div>' +
+                        '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\"><div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-1\">Expected Output</div><div class=\"text-xs text-gray-300 whitespace-pre-wrap\">' + escapeHtml(caseItem.expected_answer || '') + '</div></div>' +
+                        (caseItem.retrieval_context && (Array.isArray(caseItem.retrieval_context) ? caseItem.retrieval_context.length > 0 : String(caseItem.retrieval_context).trim() !== '')
+                            ? '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\"><div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-1\">Retrieval Context</div><div class=\"text-xs text-gray-300 whitespace-pre-wrap\">' + escapeHtml(Array.isArray(caseItem.retrieval_context) ? caseItem.retrieval_context.join('\\n\\n') : String(caseItem.retrieval_context)) + '</div></div>'
+                            : '') +
+                        '<div><div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-2\">Verbose Logs</div><div class=\"space-y-2\">' + verboseLogsHtml + '</div></div>' +
+                    '</div>' +
+                    '<div class=\"xl:col-span-2 space-y-4\">' +
+                        '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\">' +
+                            '<div class=\"grid grid-cols-2 lg:grid-cols-3 gap-3 text-xs\">' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Test Case ID</div><div class=\"text-gray-200 font-mono mt-1\">' + escapeHtml(caseItem.name || '') + '</div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Status</div><div class=\"mt-1\"><span class=\"px-2 py-0.5 rounded border text-[11px] ' + statusCls + '\">' + escapeHtml(caseItem.status || 'Unknown') + '</span></div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Order</div><div class=\"text-gray-200 mt-1\">' + String(idx + 1) + '</div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Timestamp</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.timestamp || '') + '</div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Source File</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.source_file || '') + '</div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Primary Metric</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.metric_kind || '') + ' ' + escapeHtml(caseItem.metric || '') + ' · ' + Number(caseItem.metric_score || 0).toFixed(3) + '</div></div>' +
+                            '</div>' +
+                            '<div class=\"mt-3 text-[11px] text-gray-500\">Metadata</div>' +
+                            '<div class=\"text-xs text-gray-300 mt-1 whitespace-pre-wrap\">' + escapeHtml(caseItem.metadata || '') + '</div>' +
+                        '</div>' +
+                        '<div class=\"rounded border border-gray-800/70 bg-[#11141b] p-3\">' +
+                            '<div class=\"text-[10px] uppercase tracking-wider text-gray-500 mb-2\">Metrics</div>' +
+                            '<div class=\"space-y-2\">' + metricsHtml + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            if (prevBtn) prevBtn.disabled = idx <= 0;
+            if (nextBtn) nextBtn.disabled = idx >= (cases.length - 1);
+            if (prevBtn) prevBtn.classList.toggle('opacity-40', idx <= 0);
+            if (nextBtn) nextBtn.classList.toggle('opacity-40', idx >= (cases.length - 1));
+
+            body.querySelectorAll('.metric-verbose-toggle').forEach(function(btn) {{
+                btn.addEventListener('click', function() {{
+                    const targetId = btn.getAttribute('data-target');
+                    const target = targetId ? document.getElementById(targetId) : null;
+                    if (!target) return;
+                    const willShow = target.classList.contains('hidden');
+                    target.classList.toggle('hidden', !willShow);
+                    btn.textContent = willShow ? 'Hide verbose logs' : 'Show verbose logs';
+                }});
+            }});
+
+            modal.classList.remove('hidden');
         }}
 
         function renderCaseGrid() {{
@@ -1127,6 +1934,7 @@ def create_dashboard(json_filepath, html_filepath):
                 if (av === bv) return 0;
                 return (av > bv ? 1 : -1) * (testCaseState.sortDir === 'asc' ? 1 : -1);
             }});
+            testCaseState.sortedCases = sorted;
 
             const total = sorted.length;
             const maxPage = Math.max(1, Math.ceil(total / testCaseState.pageSize));
@@ -1144,7 +1952,7 @@ def create_dashboard(json_filepath, html_filepath):
                 const statusBadges = (item.status || '').toLowerCase() === 'failed'
                     ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
                     : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-                return '<tr class=\"border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer\" data-case-index=\"' + (start + idx) + '\">' +
+                return '<tr class=\"table-hover-row border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer\" data-case-index=\"' + (start + idx) + '\">' +
                     '<td data-col=\"name\" class=\"py-3 px-4 text-gray-300\">' + escapeHtml(item.name) + '</td>' +
                     '<td data-col=\"status\" class=\"py-3 px-4\"><span class=\"px-2 py-0.5 rounded-full text-[11px] border ' + statusBadges + '\">' + escapeHtml(item.status) + '</span></td>' +
                     '<td data-col=\"input\" class=\"py-3 px-4 text-gray-300\" title=\"' + escapeHtml(item.question) + '\">' + escapeHtml(truncateText(item.question, 90)) + '</td>' +
@@ -1155,7 +1963,7 @@ def create_dashboard(json_filepath, html_filepath):
             document.querySelectorAll('#detail-test-cases-grid-body tr[data-case-index]').forEach(function(rowEl) {{
                 rowEl.addEventListener('click', function() {{
                     const idx = Number(rowEl.getAttribute('data-case-index'));
-                    renderCaseDetails(sorted[idx]);
+                    openCaseModalByIndex(idx);
                 }});
             }});
 
@@ -1165,8 +1973,11 @@ def create_dashboard(json_filepath, html_filepath):
         function initCaseGrid(run) {{
             testCaseState.run = run;
             testCaseState.cases = getRunTestCases(run);
+            testCaseState.sortedCases = [];
             testCaseState.page = 1;
-            document.getElementById('detail-case-panel').classList.add('hidden');
+            testCaseState.selectedCaseName = '';
+            testCaseState.selectedCaseIndex = -1;
+            closeCaseModal();
             renderCaseGrid();
         }}
 
@@ -1231,15 +2042,62 @@ def create_dashboard(json_filepath, html_filepath):
                 }}
             }});
 
-            document.getElementById('detail-case-close').addEventListener('click', function() {{
-                document.getElementById('detail-case-panel').classList.add('hidden');
+            const caseCloseBtn = document.getElementById('detail-case-close');
+            const casePrevBtn = document.getElementById('detail-case-prev');
+            const caseNextBtn = document.getElementById('detail-case-next');
+            const caseBackdrop = document.getElementById('detail-case-backdrop');
+
+            if (caseCloseBtn) {{
+                caseCloseBtn.addEventListener('click', closeCaseModal);
+            }}
+            const downloadCsvBtn = document.getElementById('detail-download-csv');
+            if (downloadCsvBtn) {{
+                downloadCsvBtn.addEventListener('click', downloadCurrentRunCsv);
+            }}
+            if (caseBackdrop) {{
+                caseBackdrop.addEventListener('click', closeCaseModal);
+            }}
+            if (casePrevBtn) {{
+                casePrevBtn.addEventListener('click', function() {{
+                    if (testCaseState.selectedCaseIndex > 0) {{
+                        openCaseModalByIndex(testCaseState.selectedCaseIndex - 1);
+                    }}
+                }});
+            }}
+            if (caseNextBtn) {{
+                caseNextBtn.addEventListener('click', function() {{
+                    const maxIdx = (testCaseState.sortedCases || []).length - 1;
+                    if (testCaseState.selectedCaseIndex >= 0 && testCaseState.selectedCaseIndex < maxIdx) {{
+                        openCaseModalByIndex(testCaseState.selectedCaseIndex + 1);
+                    }}
+                }});
+            }}
+
+            document.addEventListener('keydown', function(e) {{
+                if (e.key === 'Escape') {{
+                    closeCaseModal();
+                    return;
+                }}
+                if (e.key === 'ArrowLeft') {{
+                    if (testCaseState.selectedCaseIndex > 0) {{
+                        openCaseModalByIndex(testCaseState.selectedCaseIndex - 1);
+                    }}
+                }}
+                if (e.key === 'ArrowRight') {{
+                    const maxIdx = (testCaseState.sortedCases || []).length - 1;
+                    if (testCaseState.selectedCaseIndex >= 0 && testCaseState.selectedCaseIndex < maxIdx) {{
+                        openCaseModalByIndex(testCaseState.selectedCaseIndex + 1);
+                    }}
+                }}
             }});
         }}
 
         // ── Navigation ────────────────────────────────────────────────────────
         function showRuns() {{
+            closeCaseModal();
             document.getElementById('view-runs').classList.remove('hidden');
             document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-compare').classList.add('hidden');
         }}
 
         function showDetail(idx) {{
@@ -1259,16 +2117,18 @@ def create_dashboard(json_filepath, html_filepath):
             document.getElementById('detail-pass-label').textContent = run.passed + '/' + run.total + ' passed';
             document.getElementById('detail-fail-count').textContent = run.failed + ' failing test case' + (run.failed !== 1 ? 's' : '');
 
-            if (detailDonut) {{ detailDonut.destroy(); }}
-            const dCtx = document.getElementById('detailDonutChart').getContext('2d');
-            detailDonut = new Chart(dCtx, {{
-                type: 'doughnut',
-                data: {{
-                    labels: ['Passed', 'Failed'],
-                    datasets: [{{ data: [run.passed, run.failed], backgroundColor: ['#10b981', '#f43f5e'], borderWidth: 0, cutout: '88%' }}]
-                }},
-                options: {{ responsive: true, maintainAspectRatio: false, plugins: {{ legend: {{ display: false }}, tooltip: {{ enabled: false }} }} }}
-            }});
+            if (detailDonut) {{ detailDonut.destroy(); detailDonut = null; }}
+            if (typeof Chart !== 'undefined') {{
+                const dCtx = document.getElementById('detailDonutChart').getContext('2d');
+                detailDonut = new Chart(dCtx, {{
+                    type: 'doughnut',
+                    data: {{
+                        labels: ['Passed', 'Failed'],
+                        datasets: [{{ data: [run.passed, run.failed], backgroundColor: ['#10b981', '#f43f5e'], borderWidth: 0, cutout: '88%' }}]
+                    }},
+                    options: {{ responsive: true, maintainAspectRatio: false, plugins: {{ legend: {{ display: false }}, tooltip: {{ enabled: false }} }} }}
+                }});
+            }}
 
             // Metric cards
             const metricCardsEl = document.getElementById('detail-metric-cards');
@@ -1297,23 +2157,39 @@ def create_dashboard(json_filepath, html_filepath):
             // Analysis summary
             const analysisSummaryEl = document.getElementById('detail-analysis-summary');
             const analysisSummaryBodyEl = document.getElementById('detail-analysis-summary-body');
+            const analysisSummaryToggleEl = document.getElementById('detail-analysis-toggle');
             if (run.analysis_summary && run.analysis_summary.trim()) {{
                 const cleanSummary = cleanSummaryMarkdown(run.analysis_summary);
                 analysisSummaryEl.classList.remove('hidden');
                 analysisSummaryBodyEl.innerHTML =
                     cleanSummary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\n/g, '<br>');
+                analysisSummaryBodyEl.classList.remove('hidden');
+                if (analysisSummaryToggleEl) {{
+                    analysisSummaryToggleEl.textContent = 'Collapse';
+                    analysisSummaryToggleEl.onclick = function() {{
+                        const isHidden = analysisSummaryBodyEl.classList.contains('hidden');
+                        analysisSummaryBodyEl.classList.toggle('hidden', !isHidden);
+                        analysisSummaryToggleEl.textContent = isHidden ? 'Collapse' : 'Expand';
+                    }};
+                }}
             }} else {{
                 analysisSummaryEl.classList.add('hidden');
                 analysisSummaryBodyEl.innerHTML = '';
+                if (analysisSummaryToggleEl) {{
+                    analysisSummaryToggleEl.onclick = null;
+                }}
             }}
 
         }}
 
         setupCaseGridEvents();
+        setupCompareMenu();
+        setupRunsTablePagination();
     </script>
 </body>
 </html>"""
 
+    Path(html_filepath).parent.mkdir(parents=True, exist_ok=True)
     with open(html_filepath, "w", encoding="utf-8") as f:
         f.write(html_template)
 
@@ -1325,17 +2201,17 @@ def create_dashboard(json_filepath, html_filepath):
 if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
-        input_source = "evaluation_results.json"
-        output_html = "confident_ai_dashboard.html"
+        input_source = "results" if Path("results").is_dir() else "evaluation_results.json"
+        output_html = "results/confident_ai_dashboard.html"
     elif len(args) == 1:
         input_source = args[0]
-        output_html = "confident_ai_dashboard.html"
+        output_html = "results/confident_ai_dashboard.html"
     else:
         if args[-1].lower().endswith(".html"):
             output_html = args[-1]
             input_source = args[:-1] if len(args[:-1]) > 1 else args[0]
         else:
             input_source = args
-            output_html = "confident_ai_dashboard.html"
+            output_html = "results/confident_ai_dashboard.html"
 
     create_dashboard(input_source, output_html)

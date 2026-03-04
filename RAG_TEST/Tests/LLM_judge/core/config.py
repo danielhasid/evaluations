@@ -17,13 +17,14 @@ RAG_METRIC_KEYS = [
 @dataclass
 class RunConfig:
     evaluator_type: str
-    input_csv: str = "golden_set.csv"
+    input_csv: str = "datasets/llm/LLM_goldenset.csv"
     output_json: Optional[str] = None
     output_dir: str = "results"
     metrics: List[str] = field(default_factory=list)
     generate_summary: bool = True
     generate_dashboard: bool = True
     dashboard_filename: str = "confident_ai_dashboard.html"
+    truths_extraction_limit: Optional[int] = None
 
 
 def make_run_json_path(output_dir: str = ".", prefix: str = "evaluation_results") -> str:

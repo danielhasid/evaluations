@@ -23,27 +23,62 @@ class GevalAdapter:
     evaluator_type = "GEval"
     valid_metric_keys = GEVAL_METRIC_KEYS
 
+    @staticmethod
+    def _parse_context_field(raw_value: str) -> list:
+        """Parse context from JSON list, pipe-separated text, or plain text."""
+        text = (raw_value or "").strip()
+        if not text:
+            return []
+
+        # JSON list support: ["ctx1", "ctx2"]
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                cleaned = []
+                for item in parsed:
+                    item_text = str(item).strip()
+                    if item_text:
+                        cleaned.append(item_text)
+                if cleaned:
+                    return cleaned
+        except json.JSONDecodeError:
+            pass
+
+        # Pipe-separated support: ctx1|ctx2|ctx3
+        if "|" in text:
+            return [part.strip() for part in text.split("|") if part.strip()]
+
+        return [text]
+
     def load_golden_set_csv(self, filepath: str) -> list:
         qa_pairs = []
+        # Resolve path relative to LLM_judge root if it's a relative path
+        if not os.path.isabs(filepath):
+            filepath = os.path.join(_ROOT, filepath)
+        
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"CSV file not found: {filepath}")
 
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, "r", encoding="utf-8-sig", newline="") as f:
             reader = csv.DictReader(f)
             required = {"question", "expected_answer"}
             if not required.issubset(reader.fieldnames or []):
                 raise ValueError(f"CSV must contain columns: {required}. Found: {reader.fieldnames}")
 
             for row in reader:
-                raw_context = (row.get("context") or "").strip()
-                try:
-                    context = json.loads(raw_context) if raw_context else []
-                except json.JSONDecodeError:
-                    context = [raw_context] if raw_context else []
+                question = (row.get("question") or "").strip()
+                expected = (row.get("expected_answer") or "").strip()
+                if not question and not expected:
+                    # Ignore fully empty lines in CSV.
+                    continue
+                if not question or not expected:
+                    raise ValueError("Each row must include non-empty question and expected_answer.")
+
+                context = self._parse_context_field(row.get("context") or "")
 
                 qa_pairs.append({
-                    "question": row["question"].strip(),
-                    "expected_answer": row["expected_answer"].strip(),
+                    "question": question,
+                    "expected_answer": expected,
                     "context": context,
                     "metadata": (row.get("metadata") or "").strip(),
                 })
@@ -51,7 +86,7 @@ class GevalAdapter:
         log_stage(f"[OK] Loaded {len(qa_pairs)} Q&A pairs from {filepath}")
         return qa_pairs
 
-    def run_batch_evaluation(self, qa_pairs: list, selected_metrics: list) -> BatchEvaluationResult:
+    def run_batch_evaluation(self, qa_pairs: list, selected_metrics: list, truths_limit: int = None) -> BatchEvaluationResult:
         test_cases = []
         for qa_pair in qa_pairs:
             test_cases.append(

@@ -16,5 +16,5 @@ class EvaluatorAdapter(Protocol):
     def load_golden_set_csv(self, filepath: str) -> list:
         ...
 
-    def run_batch_evaluation(self, qa_pairs: list, selected_metrics: list) -> BatchEvaluationResult:
+    def run_batch_evaluation(self, qa_pairs: list, selected_metrics: list, truths_limit: int = None) -> BatchEvaluationResult:
         ...

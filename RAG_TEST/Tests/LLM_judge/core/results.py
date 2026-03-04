@@ -36,6 +36,11 @@ def _extract_results_from_evaluate(evaluation_result: Any) -> List[Dict[str, Dic
                 passed = md.get("success")
                 if passed is None:
                     passed = md.get("passed")
+                verbose_logs = md.get("verbose_logs")
+                criteria = md.get("criteria")
+                evaluation_steps = md.get("evaluation_steps")
+                rubric = md.get("rubric")
+                evaluation_model = md.get("evaluation_model") or md.get("model")
             else:
                 metric_name = getattr(md, "name", None) or getattr(md, "metric", None)
                 score = getattr(md, "score", None)
@@ -44,6 +49,11 @@ def _extract_results_from_evaluate(evaluation_result: Any) -> List[Dict[str, Dic
                 passed = getattr(md, "success", None)
                 if passed is None:
                     passed = getattr(md, "passed", None)
+                verbose_logs = getattr(md, "verbose_logs", None)
+                criteria = getattr(md, "criteria", None)
+                evaluation_steps = getattr(md, "evaluation_steps", None)
+                rubric = getattr(md, "rubric", None)
+                evaluation_model = getattr(md, "evaluation_model", None) or getattr(md, "model", None)
 
             if metric_name:
                 row_metrics[metric_name] = {
@@ -51,6 +61,11 @@ def _extract_results_from_evaluate(evaluation_result: Any) -> List[Dict[str, Dic
                     "reason": reason,
                     "threshold": threshold,
                     "passed": passed,
+                    "verbose_logs": verbose_logs,
+                    "criteria": criteria,
+                    "evaluation_steps": evaluation_steps,
+                    "rubric": rubric,
+                    "evaluation_model": evaluation_model,
                 }
 
         extracted.append(row_metrics)
@@ -62,7 +77,7 @@ def save_initial_results(qa_pairs: list, evaluator_type: str, output_filepath: s
     """Save initial results without metric scores."""
     results = []
     for qa_pair in qa_pairs:
-        results.append({
+        result_item = {
             "question": qa_pair.get("question", ""),
             "generated_answer": qa_pair.get("generated_answer", ""),
             "expected_answer": qa_pair.get("expected_answer", ""),
@@ -70,7 +85,15 @@ def save_initial_results(qa_pairs: list, evaluator_type: str, output_filepath: s
             "timestamp": datetime.now().isoformat(),
             "evaluation_metrics": None,
             "status": "pending",
-        })
+        }
+        
+        # Add RAG-specific fields if present
+        if "retrieval_context" in qa_pair:
+            result_item["retrieval_context"] = qa_pair.get("retrieval_context", [])
+        if "context" in qa_pair:
+            result_item["context"] = qa_pair.get("context", [])
+        
+        results.append(result_item)
 
     data = {
         "evaluator_type": evaluator_type,
@@ -115,6 +138,11 @@ def update_results_with_metrics(
                             "reason": getattr(metric, "reason", None),
                             "threshold": threshold,
                             "passed": passed,
+                            "verbose_logs": getattr(metric, "verbose_logs", None),
+                            "criteria": getattr(metric, "criteria", None),
+                            "evaluation_steps": getattr(metric, "evaluation_steps", None),
+                            "rubric": getattr(metric, "rubric", None),
+                            "evaluation_model": getattr(metric, "evaluation_model", None) or getattr(metric, "model", None),
                         }
                 except Exception as exc:
                     log_stage(f"  Warning: Could not extract metric data for {metric} on test case {i}: {exc}")

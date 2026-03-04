@@ -8,13 +8,24 @@ _ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 if _ROOT not in _sys.path:
     _sys.path.insert(0, _ROOT)
 
-from core.config import GEVAL_METRIC_KEYS, RAG_METRIC_KEYS, RunConfig
-from core.env import load_environment, require_openai_api_key
-from core.pipeline import run_pipeline
-from core.logging_utils import log_stage
-from evaluators.geval_adapter import GevalAdapter
-from evaluators.rag_adapter import RagAdapter
-from analyze_eval import generate_evaluation_summary, save_summary_to_json
+try:  # package import path (preferred for IDE/static analysis)
+    from ..core.config import GEVAL_METRIC_KEYS, RAG_METRIC_KEYS, RunConfig
+    from ..core.env import load_environment, require_openai_api_key
+    from ..core.pipeline import run_pipeline
+    from ..core.logging_utils import log_stage
+    from ..evaluators.geval_adapter import GevalAdapter
+    from ..evaluators.rag_adapter import RagAdapter
+    from ..analyze_eval import generate_evaluation_summary, save_summary_to_json
+    from ..generate_dashboard import create_dashboard
+except ImportError:  # script execution fallback
+    from core.config import GEVAL_METRIC_KEYS, RAG_METRIC_KEYS, RunConfig
+    from core.env import load_environment, require_openai_api_key
+    from core.pipeline import run_pipeline
+    from core.logging_utils import log_stage
+    from evaluators.geval_adapter import GevalAdapter
+    from evaluators.rag_adapter import RagAdapter
+    from analyze_eval import generate_evaluation_summary, save_summary_to_json
+    from generate_dashboard import create_dashboard
 
 
 class EvaluationCenterFacade:
@@ -24,7 +35,7 @@ class EvaluationCenterFacade:
 
     def run_geval_evaluation(
         self,
-        input_csv: str = "golden_set.csv",
+        input_csv: str = "datasets/llm/LLM_goldenset.csv",
         output_json: str = None,
         output_dir: str = "results",
         metrics=None,
@@ -46,10 +57,11 @@ class EvaluationCenterFacade:
 
     def run_rag_evaluation(
         self,
-        input_csv: str = "golden_set.csv",
+        input_csv: str = "datasets/rag/RAG_goldenset.csv",
         output_json: str = None,
         output_dir: str = "results",
         metrics=None,
+        truths_extraction_limit: int = None,
     ):
         if not metrics:
             raise ValueError(
@@ -63,6 +75,7 @@ class EvaluationCenterFacade:
             output_json=output_json,
             output_dir=output_dir,
             metrics=metrics,
+            truths_extraction_limit=truths_extraction_limit,
         )
         qa_pairs, test_cases, metrics_list, run_json = run_pipeline(config=config, adapter=RagAdapter())
         self._post_process(run_json)
@@ -73,5 +86,13 @@ class EvaluationCenterFacade:
         log_stage("\n[LLM] Generating analysis summary with GPT-4o...")
         summary = generate_evaluation_summary(output_json, self.api_key)
         save_summary_to_json(output_json, summary)
+        output_dir = _os.path.dirname(_os.path.abspath(output_json)) or "."
+        dashboard_path = _os.path.join(output_dir, "confident_ai_dashboard.html")
+        log_stage(f"\n[DASHBOARD] Regenerating dashboard from all runs in: {output_dir}")
+        try:
+            create_dashboard(output_dir, dashboard_path)
+            log_stage(f"[DASHBOARD] Updated: {dashboard_path}")
+        except Exception as exc:
+            log_stage(f"[WARN] Dashboard generation failed: {exc}")
         log_stage("\n--- Analysis Summary ---")
         log_stage(summary)
