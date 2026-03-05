@@ -25,16 +25,33 @@
         #detail-case-modal .text-gray-300 { color: #f3f4f6 !important; }
         #detail-case-modal .text-gray-200 { color: #ffffff !important; }
         #detail-case-modal .text-gray-100 { color: #ffffff !important; }
+        /* Persistent attribution footer for generated dashboards */
+        .dashboard-attribution {
+            position: fixed;
+            left: 1rem;
+            bottom: 0.75rem;
+            z-index: 40;
+            font-size: 0.75rem;
+            letter-spacing: 0.02em;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        main { padding-bottom: 3rem; }
         @media print {
             aside { display: none !important; }
             body { display: block !important; background: #fff !important; color: #000 !important; overflow: visible !important; height: auto !important; }
-            main { padding: 1rem !important; overflow: visible !important; height: auto !important; }
+            main { padding: 1rem !important; padding-bottom: 2rem !important; overflow: visible !important; height: auto !important; }
             .glass-panel { background: #f9fafb !important; border: 1px solid #e5e7eb !important; box-shadow: none !important; }
             .text-gray-400, .text-gray-500 { color: #374151 !important; }
             .text-gray-300, .text-gray-200 { color: #111827 !important; }
             .text-white { color: #000 !important; }
             .no-print { display: none !important; }
             tr.hidden { display: table-row !important; }
+            .dashboard-attribution {
+                left: 1.5cm;
+                bottom: 1cm;
+                color: #111827 !important;
+            }
             @page { margin: 1.5cm; size: A4; }
         }
     </style>
@@ -498,6 +515,7 @@
         </div><!-- /view-compare -->
 
     </main>
+    <div class="dashboard-attribution">created by Daniel Hasid Senior QA Evaluation Engineer</div>
 
     <script>
         // ── Embedded run data ─────────────────────────────────────────────────
