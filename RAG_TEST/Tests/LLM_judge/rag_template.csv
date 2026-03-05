@@ -1,4 +1,0 @@
-question,expected_answer,retrieval_context,context,metadata
-"What is Python?","A high-level programming language.","Python docs: overview|Wikipedia: Python language","Python docs: overview|Wikipedia: Python language","general"
-"How does async/await work in Python?","It enables asynchronous coroutines coordinated by an event loop.","Python docs: asyncio intro|PEP 492 summary","Python docs: asyncio intro|PEP 492 summary","advanced"
-"Difference between list and tuple?","Lists are mutable; tuples are immutable.","Python docs: list type|Python docs: tuple type","Python docs: list type|Python docs: tuple type","data_structures"

@@ -9,10 +9,10 @@ This pipeline evaluates a Q&A dataset using **DeepEval LLM-as-a-Judge** metrics 
 
 Two evaluation modes are available:
 
-| Mode | Evaluator File | Metrics |
+| Mode | EvaluationCenter Method | Metrics |
 |---|---|---|
-| **GEval** | `golden_set_geval_metrix.py` | Fluency, Relevance, Correctness, Hallucination |
-| **RAG** | `golden_set_evaluator_rag_metrix.py` | Answer Relevancy, Faithfulness, Contextual Precision, Contextual Recall, Contextual Relevancy |
+| **GEval** | `run_geval_evaluation()` | Fluency, Relevance, Correctness, Hallucination |
+| **RAG** | `run_rag_evaluation()` | Answer Relevancy, Faithfulness, Contextual Precision, Contextual Recall, Contextual Relevancy |
 
 ---
 
@@ -109,23 +109,31 @@ Both methods:
 
 ---
 
-### Option B — Run the evaluator directly
+### Option B — Run via `evaluation_center.py`
 
-**GEval pipeline:**
-
-```bash
-python golden_set_geval_metrix.py
-```
-
-**RAG pipeline:**
+Run the module directly:
 
 ```bash
-python golden_set_evaluator_rag_metrix.py
+python evaluation_center.py
 ```
 
-Both scripts default to `golden_set.csv` as input and `evaluation_results.json` as output. To customise paths, edit the `INPUT_CSV` / `OUTPUT_JSON` constants at the bottom of each file inside the `main()` function.
+Or call methods from Python for full control:
 
-> Note: Running the evaluators directly does **not** automatically generate the analysis summary. Use Option A or run `analyze_eval.py` afterwards (see below).
+```python
+from evaluation_center import EvaluationCenter
+
+center = EvaluationCenter()
+center.run_geval_evaluation(
+    input_csv="golden_set.csv",
+    output_json="evaluation_results.json"
+)
+
+center.run_rag_evaluation(
+    input_csv="golden_set.csv",
+    output_json="evaluation_results.json",
+    metrics=["answer_relevancy", "faithfulness"]
+)
+```
 
 ---
 

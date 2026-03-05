@@ -14,9 +14,14 @@ _ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 if _ROOT not in _sys.path:
     _sys.path.insert(0, _ROOT)
 
-from evaluators.base import BatchEvaluationResult
-from core.config import GEVAL_METRIC_KEYS
-from core.logging_utils import log_stage
+try:  # package import path (preferred for IDE/static analysis)
+    from .base import BatchEvaluationResult
+    from ..core.config import GEVAL_METRIC_KEYS
+    from ..core.logging_utils import log_stage
+except ImportError:  # script execution fallback
+    from evaluators.base import BatchEvaluationResult
+    from core.config import GEVAL_METRIC_KEYS
+    from core.logging_utils import log_stage
 
 
 class GevalAdapter:

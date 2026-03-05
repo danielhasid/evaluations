@@ -61,7 +61,11 @@ LLM_judge/
 |-- analyze_eval.py               GPT-4o report generation from results JSON
 |-- generate_dashboard.py         (Optional) HTML dashboard from results JSONs
 |
-|-- golden_set.csv                Your Q&A test dataset (you provide this)
+|-- datasets/
+|   |-- llm/LLM_goldenset.csv     Default GEval dataset
+|   `-- rag/RAG_goldenset.csv     Default RAG dataset
+|
+|-- golden_set.csv                Optional custom dataset if you pass input_csv explicitly
 `-- results/                      All output files land here (auto-created)
     |-- GEval_evaluation_results_TIMESTAMP.json
     |-- RAG_evaluation_results_TIMESTAMP.json
@@ -276,15 +280,22 @@ OPENAI_API_KEY=sk-...
 
 ### 2. Prepare your dataset
 
-Create `golden_set.csv` in `LLM_judge/`:
+You can either:
 
-For GEval:
+- use the default sample datasets:
+  - `datasets/llm/LLM_goldenset.csv` (GEval)
+  - `datasets/rag/RAG_goldenset.csv` (RAG)
+- or provide your own CSV path via `input_csv=...`
+
+If you use a custom CSV, expected formats are:
+
+GEval:
 ```csv
 question,expected_answer,context,metadata
 "What is Python?","A high-level programming language.","","general"
 ```
 
-For RAG:
+RAG:
 ```csv
 question,expected_answer,retrieval_context,context,metadata
 "What is Python?","A high-level programming language.","Python is...","Python is...","general"
@@ -303,10 +314,16 @@ from evaluation_center import EvaluationCenter
 
 # GEval - specific metrics
 center = EvaluationCenter()
-center.run_geval_evaluation(metrics=["correctness", "hallucination"])
+center.run_geval_evaluation(
+    input_csv="datasets/llm/LLM_goldenset.csv",
+    metrics=["correctness", "hallucination"]
+)
 
 # RAG - must specify metrics explicitly
-center.run_rag_evaluation(metrics=["answer_relevancy", "faithfulness"])
+center.run_rag_evaluation(
+    input_csv="datasets/rag/RAG_goldenset.csv",
+    metrics=["answer_relevancy", "faithfulness"]
+)
 ```
 
 ### 4. Output
