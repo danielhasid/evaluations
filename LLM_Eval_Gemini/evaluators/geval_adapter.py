@@ -5,6 +5,7 @@ import os
 from deepeval import evaluate
 from deepeval.metrics import GEval
 from deepeval.metrics.g_eval import Rubric
+from deepeval.models import GeminiModel
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
 import sys as _sys
@@ -103,17 +104,21 @@ class GevalAdapter:
                 )
             )
 
+        gemini_model = GeminiModel(model="gemini-1.5-flash", use_vertexai=True)
+
         fluency = GEval(
             name="Fluency",
             criteria="Is the output grammatically correct and easy to understand? The answer should be grounded in the provided context.",
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.CONTEXT],
             threshold=0.5,
+            model=gemini_model,
         )
         relevance = GEval(
             name="Relevance",
             criteria="Does the output appropriately and directly answer the input question? The answer should directly address the question using the provided context.",
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.CONTEXT],
             threshold=0.5,
+            model=gemini_model,
         )
         correctness = GEval(
             name="Correctness",
@@ -132,6 +137,7 @@ class GevalAdapter:
             ],
             evaluation_params=[LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.CONTEXT],
             threshold=0.5,
+            model=gemini_model,
         )
         hallucination = GEval(
             name="Hallucination",
@@ -143,6 +149,7 @@ class GevalAdapter:
                 LLMTestCaseParams.CONTEXT,
             ],
             threshold=0.5,
+            model=gemini_model,
         )
 
         all_metrics = {

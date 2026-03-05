@@ -1,0 +1,4 @@
+google-cloud-aiplatform
+vertexai
+deepeval==3.8.8
+python-dotenv==1.2.2

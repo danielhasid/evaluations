@@ -1,0 +1,4 @@
+question,expected_answer,context,metadata
+"What is Python?","A high-level programming language.","Python is an interpreted language created by Guido van Rossum.","general"
+"Explain async/await in Python.","'async' defines a coroutine and 'await' pauses until an awaitable completes.","Async functions run under an event loop; awaiting yields control to other tasks.","advanced"
+"What is a tuple?","An immutable ordered sequence in Python.","Tuples use parentheses and cannot be modified after creation.","data_structures"
