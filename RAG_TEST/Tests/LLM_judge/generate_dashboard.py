@@ -696,7 +696,7 @@ def create_dashboard(json_filepath, html_filepath):
         result_label = f"{r['passed']}/{r['total']} passed"
 
         runs_table_rows_html += (
-            f'<tr class="run-row table-hover-row border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer"'
+            f'<tr class="run-row table-hover-row border-b border-gray-700/70 hover:bg-gray-800/30 transition-colors cursor-pointer"'
             f' data-run-idx="{i}" data-evaluator="{_safe(r["evaluator_type"])}" onclick="showDetail({i})">'
             f'<td class="py-3 px-4 text-gray-400 text-sm whitespace-nowrap">{_safe(ts_display)}</td>'
             f'<td class="py-3 px-4">'
@@ -746,13 +746,16 @@ def create_dashboard(json_filepath, html_filepath):
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {{ font-family: 'Inter', sans-serif; background-color: #0b0c10; color: #e5e7eb; }}
-        .glass-panel {{ background-color: #15161b; border: 1px solid #23252b; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }}
+        body {{ font-family: 'Inter', sans-serif; background-color: #020203; color: #e5e7eb; }}
+        .glass-panel {{ background-color: #0c0d10; border: 1px solid #1f2128; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.65); }}
         .nav-item {{ padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; border-radius: 0.375rem; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }}
-        .nav-item:hover, .nav-item.active {{ background-color: #1f2128; color: #f3f4f6; }}
+        .nav-item:hover, .nav-item.active {{ background-color: #15171d; color: #f3f4f6; }}
         .font-mono {{ font-family: 'Courier New', monospace; }}
         .table-hover-row {{ transition: background-color 120ms ease, box-shadow 120ms ease; }}
         .table-hover-row:hover {{ background-color: rgba(71, 85, 105, 0.24) !important; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2); }}
+        .grid-table th:not(:last-child),
+        .grid-table td:not(:last-child) {{ border-right: 1px solid rgba(75, 85, 99, 0.55); }}
+        .grid-table thead tr {{ border-bottom-color: rgba(75, 85, 99, 0.75) !important; }}
         /* Keep native date/time pickers in dark black/white palette */
         .dark-date-input {{ color-scheme: dark; }}
         .dark-date-input::-webkit-calendar-picker-indicator {{ filter: invert(1); opacity: 0.9; }}
@@ -797,7 +800,7 @@ def create_dashboard(json_filepath, html_filepath):
 <body class="flex h-screen overflow-hidden">
 
     <!-- Sidebar -->
-    <aside class="w-64 border-r border-gray-800 flex flex-col bg-[#0b0c10] overflow-y-auto shrink-0">
+    <aside class="w-64 border-r border-gray-800 flex flex-col bg-[#050506] overflow-y-auto shrink-0">
         <div class="p-5 flex items-center gap-3 border-b border-gray-800">
             <div class="w-7 h-7 bg-white rounded flex items-center justify-center text-black font-extrabold text-sm">C</div>
             <span class="font-bold text-white tracking-wide text-lg">Evaluation Tests</span>
@@ -822,7 +825,7 @@ def create_dashboard(json_filepath, html_filepath):
     </aside>
 
     <!-- Main area -->
-    <main class="flex-1 overflow-y-auto bg-[#0b0c10]">
+    <main class="flex-1 overflow-y-auto bg-[#050506]">
 
         <!-- ══════════════════════════════════════════════════════════════════
              VIEW: RUNS LIST (default)
@@ -961,9 +964,9 @@ def create_dashboard(json_filepath, html_filepath):
                     </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left">
+                    <table class="w-full text-left grid-table">
                         <thead class="bg-[#15161b]">
-                            <tr class="text-[11px] text-gray-500 uppercase tracking-wider border-b border-gray-800/50">
+                            <tr class="text-[11px] text-gray-500 uppercase tracking-wider border-b border-gray-700/70">
                                 <th class="py-3 px-4 font-semibold w-36">Time</th>
                                 <th class="py-3 px-4 font-semibold">Test Run ID</th>
                                 <th class="py-3 px-4 font-semibold w-28">Evaluator</th>
@@ -1058,7 +1061,7 @@ def create_dashboard(json_filepath, html_filepath):
             <!-- Test Cases grid -->
             <div class="glass-panel p-0 mb-6 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-800/60 flex items-center justify-between">
-                    <div id="detail-testcases-count" class="text-sm text-gray-300">Showing 0 to 0 of 0 test case(s)</div>
+                    <div id="detail-testcases-count" class="text-sm text-gray-300">Showing 0 to 0 of 0 Eval regression runs</div>
                     <div class="flex items-center gap-2 text-xs">
                         <button id="detail-download-csv" class="h-7 px-3 rounded border border-gray-700 text-gray-200 hover:text-white hover:border-gray-500 flex items-center gap-1">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"></path></svg>
@@ -1081,8 +1084,8 @@ def create_dashboard(json_filepath, html_filepath):
                     </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-[#15161b] border-b border-gray-800/60">
+                    <table class="w-full text-left text-sm grid-table">
+                        <thead class="bg-[#15161b] border-b border-gray-700/70">
                             <tr class="text-[11px] text-gray-500 uppercase tracking-wider">
                                 <th id="col-head-name" class="py-3 px-4 font-semibold w-44 cursor-pointer" data-sort="name">Name</th>
                                 <th id="col-head-status" class="py-3 px-4 font-semibold w-44 cursor-pointer" data-sort="status">Status</th>
@@ -1227,8 +1230,8 @@ def create_dashboard(json_filepath, html_filepath):
                     </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-[#15161b] border-b border-gray-800/60">
+                    <table class="w-full text-left text-sm grid-table">
+                        <thead class="bg-[#15161b] border-b border-gray-700/70">
                             <tr class="text-[11px] text-gray-500 uppercase tracking-wider">
                                 <th class="py-3 px-4 font-semibold">Test Case</th>
                                 <th class="py-3 px-4 font-semibold">Left Status</th>
@@ -2152,7 +2155,7 @@ def create_dashboard(json_filepath, html_filepath):
                 if (compareState.onlyChanged && !changed) return '';
                 if (compareState.onlyRegressions && !isRegression) return '';
 
-                return '<tr class="table-hover-row border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer" data-case-name="' + escapeHtml(name) + '">' +
+                return '<tr class="table-hover-row border-b border-gray-700/70 hover:bg-gray-800/30 cursor-pointer" data-case-name="' + escapeHtml(name) + '">' +
                     '<td class="py-3 px-4 text-gray-300 font-mono text-xs">' + escapeHtml(name) + '</td>' +
                     '<td class="py-3 px-4"><span class="px-2 py-0.5 rounded border text-[11px] ' + statusBadgeClass(lStatus) + '">' + escapeHtml(lStatus) + '</span></td>' +
                     '<td class="py-3 px-4"><span class="px-2 py-0.5 rounded border text-[11px] ' + statusBadgeClass(rStatus) + '">' + escapeHtml(rStatus) + '</span></td>' +
@@ -2587,7 +2590,7 @@ def create_dashboard(json_filepath, html_filepath):
             const pageRows = sorted.slice(start, end);
 
             document.getElementById('detail-testcases-count').textContent =
-                'Showing ' + (total === 0 ? 0 : (start + 1)) + ' to ' + end + ' of ' + total + ' test case(s)';
+                'Showing ' + (total === 0 ? 0 : (start + 1)) + ' to ' + end + ' of ' + total + ' Eval regression runs';
             document.getElementById('detail-range-text').textContent =
                 (total === 0 ? '0-0' : (start + 1) + '-' + end) + ' of ' + total;
 
@@ -2595,7 +2598,7 @@ def create_dashboard(json_filepath, html_filepath):
                 const statusBadges = (item.status || '').toLowerCase() === 'failed'
                     ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
                     : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-                return '<tr class=\"table-hover-row border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer\" data-case-index=\"' + (start + idx) + '\">' +
+                return '<tr class=\"table-hover-row border-b border-gray-700/70 hover:bg-gray-800/40 cursor-pointer\" data-case-index=\"' + (start + idx) + '\">' +
                     '<td data-col=\"name\" class=\"py-3 px-4 text-gray-300\">' + escapeHtml(item.name) + '</td>' +
                     '<td data-col=\"status\" class=\"py-3 px-4\"><span class=\"px-2 py-0.5 rounded-full text-[11px] border ' + statusBadges + '\">' + escapeHtml(item.status) + '</span></td>' +
                     '<td data-col=\"input\" class=\"py-3 px-4 text-gray-300\" title=\"' + escapeHtml(item.question) + '\">' + escapeHtml(truncateText(item.question, 90)) + '</td>' +
