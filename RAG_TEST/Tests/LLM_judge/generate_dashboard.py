@@ -1217,7 +1217,7 @@ def create_dashboard(json_filepath, html_filepath):
         </div><!-- /view-compare -->
 
     </main>
-    <div class="dashboard-attribution">created by Daniel Hasid Senior QA Evaluation Engineer</div>
+    <div class="dashboard-attribution">Created by Daniel Hasid<br>Senior QA Auto & Eval Engineer</div>
 
     <script>
         // ── Embedded run data ─────────────────────────────────────────────────
