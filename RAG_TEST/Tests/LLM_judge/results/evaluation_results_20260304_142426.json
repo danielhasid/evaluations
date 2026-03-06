@@ -6,7 +6,7 @@
       "generated_answer": "Python is a high-level, interpreted programming language that is known for its clear syntax and code readability. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming. Python is often used for web development, data analysis, artificial intelligence, machine learning, and scientific computing.",
       "expected_answer": "Python is cool",
       "metadata": "basic_knowledge",
-      "timestamp": "2026-03-04T14:24:39.560356",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,
@@ -47,7 +47,7 @@
       "generated_answer": "Async/await is a set of tools in Python for handling asynchronous operations, which allows for more efficient use of the program's resources while waiting for some operations to complete.\n\nThe 'async' keyword defines a function as a coroutine, which is a special kind of function that can be paused and resumed, allowing it to yield control to other coroutines in a non-preemptive multitasking style.\n\nThe 'await' keyword is used to call coroutines and must be used within an 'async' function. It pauses the execution of the coroutine until the awaited object is completed, at which point execution resumes. While the coroutine is paused, other coroutines can run.\n\nThis mechanism is particularly useful when dealing with I/O-bound operations, like network requests or file reads/writes, where the program often has to wait for long periods of time allowing it to perform other tasks in the meantime.",
       "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
       "metadata": "advanced_concepts",
-      "timestamp": "2026-03-04T14:24:39.560356",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,
@@ -93,7 +93,7 @@
       "generated_answer": "A list is mutable, meaning you can change its content without changing its identity. You can modify, add, remove, or rearrange items in a list. A tuple, on the other hand, is immutable. Once a tuple is created, you cannot change its content. This makes tuples slightly more efficient than lists in terms of computing resources. Additionally, lists are represented with square brackets [], while tuples are represented with parentheses ().",
       "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
       "metadata": "data_structures",
-      "timestamp": "2026-03-04T14:24:39.560356",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,

@@ -43,7 +43,7 @@ def make_run_json_path(
     evaluator_type: Optional[str] = None,
 ) -> str:
     """Generate a unique timestamped JSON filename for one evaluation run."""
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now().strftime("%d_%m_%Y_%H%M%S")
     evaluator_token = _sanitize_filename_token(evaluator_type) if evaluator_type is not None else None
     if evaluator_token:
         filename = f"{evaluator_token}_{prefix}_{ts}.json"

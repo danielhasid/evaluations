@@ -6,7 +6,7 @@
       "generated_answer": "Python is a high-level, interpreted programming language that is known for its clear syntax and readability. It was created by Guido van Rossum and first released in 1991. Python supports multiple programming paradigms, including procedural, object-oriented, and functional programming. It is widely used for various types of software development and other fields such as data analysis, machine learning, and artificial intelligence.",
       "expected_answer": "Python is cool",
       "metadata": "basic_knowledge",
-      "timestamp": "2026-03-04T13:54:08.306325",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,
@@ -47,7 +47,7 @@
       "generated_answer": "Async/await in Python is a feature for writing concurrent code using the async/await syntax. It is an implementation of the coroutine concept. The 'async' keyword defines a function as a coroutine, which is similar to a Python generator function but can pause and resume its execution. 'await' is used to pause the execution of the coroutine until the awaited Future or coroutine completes, allowing other tasks to run in the meantime. This feature is particularly useful for I/O-bound operations and enables efficient multitasking and concurrency, without using threads.",
       "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
       "metadata": "advanced_concepts",
-      "timestamp": "2026-03-04T13:54:08.306325",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,
@@ -93,7 +93,7 @@
       "generated_answer": "A list is mutable, meaning you can change its content without changing its identity. You can modify, add, remove, or rearrange items in a list.\n\nA tuple, on the other hand, is immutable. Once a tuple is created, you cannot change its contents. This means that you can't add, remove, or modify values in a tuple once it's been created. \n\nAnother difference is the syntax: a list is created using square brackets (e.g., [1, 2, 3]), whereas a tuple is created using parentheses (e.g., (1, 2, 3)).",
       "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
       "metadata": "data_structures",
-      "timestamp": "2026-03-04T13:54:08.306325",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "AnswerRelevancyMetric": {
           "score": 1.0,

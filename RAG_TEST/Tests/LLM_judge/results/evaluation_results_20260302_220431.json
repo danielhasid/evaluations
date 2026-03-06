@@ -6,7 +6,7 @@
       "generated_answer": "Python is a high-level, interpreted programming language developed by Guido van Rossum. It is known for its clear syntax, readability, and versatility. Python supports multiple programming paradigms, including procedural, object-oriented, and functional programming. It is widely used for web development, data analysis, artificial intelligence, and scientific computing, among other applications.",
       "expected_answer": "Python is cool",
       "metadata": "basic_knowledge",
-      "timestamp": "2026-03-02T22:04:43.728121",
+      "timestamp": "02_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 0.9999999999999998,
@@ -22,7 +22,7 @@
       "generated_answer": "Async/await in Python is used for handling asynchronous I/O operations, which allows the program to do other tasks while waiting for an operation to complete. The \"async\" keyword defines a function as a coroutine, which can be paused and resumed, allowing it to yield control to other coroutines. The \"await\" keyword is used in a coroutine to wait for another coroutine to finish. It suspends the execution of the coroutine until the awaited coroutine is done, allowing other coroutines to run in the meantime. This can improve the efficiency and responsiveness of programs that perform I/O or other high-latency operations.",
       "expected_answer": "Async/await is a pattern for writing asynchronous code in Python. The 'async' keyword defines a coroutine function, and 'await' pauses execution until the awaited coroutine completes, allowing other tasks to run concurrently.",
       "metadata": "advanced_concepts",
-      "timestamp": "2026-03-02T22:04:43.728121",
+      "timestamp": "02_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 1.0,
@@ -38,7 +38,7 @@
       "generated_answer": "A list is mutable, meaning you can change its content without changing its identity. You can modify, add, remove, and rearrange items in a list. On the other hand, a tuple is immutable. You cannot change a tuple once it's created. This means that tuples are faster and consume less memory than lists. Another key difference is that lists are defined by enclosing the elements in square brackets [], while tuples are enclosed in parentheses ().",
       "expected_answer": "Lists are mutable sequences that can be modified after creation, while tuples are immutable sequences that cannot be changed once created. Lists use square brackets [] and tuples use parentheses ().",
       "metadata": "data_structures",
-      "timestamp": "2026-03-02T22:04:43.728121",
+      "timestamp": "02_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 1.0,

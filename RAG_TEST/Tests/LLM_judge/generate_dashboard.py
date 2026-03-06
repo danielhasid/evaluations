@@ -98,6 +98,42 @@ def _to_bool(v, default=None):
     return default
 
 
+def _parse_datetime_value(value: str):
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+    m = re.search(r"(\d{8})_(\d{6})", raw)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(1)}_{m.group(2)}", "%Y%m%d_%H%M%S")
+        except ValueError:
+            pass
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(1)}-{m.group(2)}-{m.group(3)}", "%Y-%m-%d")
+        except ValueError:
+            pass
+    m = re.search(r"(\d{2})_(\d{2})_(\d{4})", raw)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(1)}_{m.group(2)}_{m.group(3)}", "%d_%m_%Y")
+        except ValueError:
+            pass
+    return None
+
+
+def _format_date_ddmmyyyy(value: str) -> str:
+    dt = _parse_datetime_value(value)
+    if dt is None:
+        return (value or "").strip()
+    return dt.strftime("%d-%m-%Y")
+
+
 def _norm_metric_key(k) -> str:
     if not isinstance(k, str):
         return ""
@@ -490,15 +526,15 @@ def _build_per_run_summaries(source_files: list) -> list:
         rows_html = _build_rows_html(table_items, run_metric_names, id_prefix=f"r{run_idx}_")
 
         # Build short label for chart x-axis
-        label = source_name
+        label = _format_date_ddmmyyyy(first_ts) if first_ts else source_name
         ts_match = re.search(r'(\d{8}_\d{6})', source_name)
         if ts_match:
             ts_raw = ts_match.group(1)
             try:
                 dt = datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
-                label = dt.strftime("%b %d %H:%M")
+                label = dt.strftime("%d-%m-%Y")
             except ValueError:
-                label = ts_raw
+                label = _format_date_ddmmyyyy(ts_raw)
         elif len(label) > 22:
             label = label[:19] + "..."
 
@@ -650,7 +686,7 @@ def create_dashboard(json_filepath, html_filepath):
         if len(r["metric_names"]) > 3:
             metric_chips += f'<span class="text-gray-500 text-[10px]">+{len(r["metric_names"]) - 3} more</span>'
 
-        ts_display = r["timestamp"][:16].replace("T", " ") if r["timestamp"] else r["label"]
+        ts_display = _format_date_ddmmyyyy(r["timestamp"]) if r["timestamp"] else r["label"]
         fname_short = r["filename"][:32] + ("..." if len(r["filename"]) > 32 else "")
 
         result_cls = (
@@ -826,11 +862,17 @@ def create_dashboard(json_filepath, html_filepath):
                     <div class="flex w-full flex-wrap items-end justify-start gap-3">
                         <div class="space-y-2">
                             <label class="text-[11px] uppercase tracking-wider text-gray-500">Start</label>
-                            <input id="time-custom-start-date" type="date" class="dark-date-input bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-44">
+                            <div class="flex items-center gap-2">
+                                <input id="time-custom-start-date" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" maxlength="10" class="bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-32">
+                                <input id="time-custom-start-time" type="text" inputmode="numeric" placeholder="HH:MM" maxlength="5" class="bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-24">
+                            </div>
                         </div>
                         <div class="space-y-2">
                             <label class="text-[11px] uppercase tracking-wider text-gray-500">End</label>
-                            <input id="time-custom-end-date" type="date" class="dark-date-input bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-44">
+                            <div class="flex items-center gap-2">
+                                <input id="time-custom-end-date" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" maxlength="10" class="bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-32">
+                                <input id="time-custom-end-time" type="text" inputmode="numeric" placeholder="HH:MM" maxlength="5" class="bg-[#0b0c10] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 w-24">
+                            </div>
                         </div>
                     </div>
                     <div class="mt-2">
@@ -915,7 +957,7 @@ def create_dashboard(json_filepath, html_filepath):
             <div class="glass-panel p-0 overflow-hidden">
                 <div class="p-5 border-b border-gray-800/50 flex items-center justify-between">
                     <div>
-                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong id="runs-showing-range" class="text-white">1 to {total_runs}</strong> of <strong id="runs-showing-total" class="text-white">{total_runs}</strong> test run{"s" if total_runs != 1 else ""}</h3>
+                        <h3 class="text-gray-200 font-medium text-sm">Showing <strong id="runs-showing-range" class="text-white">1 to {total_runs}</strong> of <strong id="runs-showing-total" class="text-white">{total_runs}</strong> Eval regression runs</h3>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -1227,9 +1269,11 @@ def create_dashboard(json_filepath, html_filepath):
         const dashboardState = {{
             selectedEvaluator: 'All',
             selectedRunIdx: -1,
-            timeRangePreset: '12m',
+            timeRangePreset: 'today',
             customStartDate: '',
             customEndDate: '',
+            customStartTime: '',
+            customEndTime: '',
         }};
 
         // ── Formatting helpers ────────────────────────────────────────────────
@@ -1406,7 +1450,7 @@ def create_dashboard(json_filepath, html_filepath):
         function renderRunsChartForEntries(filteredEntries) {{
             if (!runsChart) return;
             const runs = filteredEntries.map(function(item) {{ return item.run; }});
-            const labels = runs.map(function(run) {{ return run.label; }});
+            const labels = runs.map(function(run) {{ return getRunDateDisplay(run); }});
             const metricSet = new Set();
             runs.forEach(function(run) {{
                 (run.metric_names || []).forEach(function(name) {{ metricSet.add(name); }});
@@ -1554,7 +1598,98 @@ def create_dashboard(json_filepath, html_filepath):
             const raw = run.timestamp;
             if (!raw) return null;
             const dt = new Date(raw);
-            return Number.isFinite(dt.getTime()) ? dt : null;
+            if (Number.isFinite(dt.getTime())) return dt;
+            const dmyMatch = String(raw).trim().match(/^(\d{{2}})_(\d{{2}})_(\d{{4}})$/);
+            if (dmyMatch) {{
+                const parsed = new Date(Number(dmyMatch[3]), Number(dmyMatch[2]) - 1, Number(dmyMatch[1]));
+                return Number.isFinite(parsed.getTime()) ? parsed : null;
+            }}
+            return null;
+        }}
+
+        function pad2(value) {{
+            return String(value).padStart(2, '0');
+        }}
+
+        function formatDateDdMmYyyy(dateObj) {{
+            const dt = new Date(dateObj);
+            if (!Number.isFinite(dt.getTime())) return '';
+            return pad2(dt.getDate()) + '-' + pad2(dt.getMonth() + 1) + '-' + String(dt.getFullYear());
+        }}
+
+        function normalizeTime24h(value) {{
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const m = raw.match(/^(\d{{1,2}}):(\d{{2}})$/);
+            if (!m) return '';
+            const h = Number(m[1]);
+            const min = Number(m[2]);
+            if (!Number.isInteger(h) || !Number.isInteger(min)) return '';
+            if (h < 0 || h > 23 || min < 0 || min > 59) return '';
+            return pad2(h) + ':' + pad2(min);
+        }}
+
+        function normalizeDateDdMmYyyy(value) {{
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const m = raw.match(/^(\d{{1,2}})\/(\d{{1,2}})\/(\d{{4}})$/);
+            if (!m) return '';
+            const d = Number(m[1]);
+            const mon = Number(m[2]);
+            const y = Number(m[3]);
+            if (!Number.isInteger(d) || !Number.isInteger(mon) || !Number.isInteger(y)) return '';
+            if (y < 1000 || y > 9999 || mon < 1 || mon > 12 || d < 1 || d > 31) return '';
+            const dt = new Date(y, mon - 1, d);
+            if (dt.getFullYear() !== y || (dt.getMonth() + 1) !== mon || dt.getDate() !== d) return '';
+            return pad2(d) + '/' + pad2(mon) + '/' + String(y);
+        }}
+
+        function formatDateForInput(dateObj) {{
+            const dt = new Date(dateObj);
+            if (!Number.isFinite(dt.getTime())) return '';
+            return pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + String(dt.getFullYear());
+        }}
+
+        function formatDateValue(value) {{
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const fromDateCtor = new Date(raw);
+            if (Number.isFinite(fromDateCtor.getTime())) {{
+                return formatDateDdMmYyyy(fromDateCtor);
+            }}
+            const isoMatch = raw.match(/^(\d{{4}})-(\d{{2}})-(\d{{2}})/);
+            if (isoMatch) {{
+                return isoMatch[3] + '-' + isoMatch[2] + '-' + isoMatch[1];
+            }}
+            const dmyMatch = raw.match(/^(\d{{2}})-(\d{{2}})-(\d{{4}})$/);
+            if (dmyMatch) {{
+                return raw;
+            }}
+            const dmyUnderscoreMatch = raw.match(/^(\d{{2}})_(\d{{2}})_(\d{{4}})$/);
+            if (dmyUnderscoreMatch) {{
+                return dmyUnderscoreMatch[1] + '-' + dmyUnderscoreMatch[2] + '-' + dmyUnderscoreMatch[3];
+            }}
+            return raw;
+        }}
+
+        function getRunDateDisplay(run) {{
+            if (!run) return '';
+            const fromTs = formatDateValue(run.timestamp || '');
+            if (fromTs) return fromTs;
+            return formatDateValue(run.label || '');
+        }}
+
+        function normalizeRunRowDateCells() {{
+            document.querySelectorAll('tr.run-row').forEach(function(row) {{
+                const idx = Number(row.getAttribute('data-run-idx'));
+                if (Number.isNaN(idx)) return;
+                const run = RUNS_DATA[idx];
+                const cell = row.querySelector('td');
+                const dateText = getRunDateDisplay(run);
+                if (cell && dateText) {{
+                    cell.textContent = dateText;
+                }}
+            }});
         }}
 
         function startOfDay(dateObj) {{
@@ -1569,12 +1704,24 @@ def create_dashboard(json_filepath, html_filepath):
             return d;
         }}
 
-        function parseCustomRangeDateTime(dateValue, isEnd) {{
-            if (!dateValue) return null;
-            const composed = new Date(dateValue + 'T00:00:00');
+        function parseCustomRangeDateTime(dateValue, timeValue, isEnd) {{
+            const normalizedDate = normalizeDateDdMmYyyy(dateValue);
+            if (!normalizedDate) return null;
+            const normalizedTime = normalizeTime24h(timeValue);
+            if (timeValue && !normalizedTime) return null;
+            const timePart = normalizedTime || '00:00';
+            const dateMatch = normalizedDate.match(/^(\d{{2}})\/(\d{{2}})\/(\d{{4}})$/);
+            if (!dateMatch) return null;
+            const hhmm = timePart.split(':');
+            const h = Number(hhmm[0]);
+            const min = Number(hhmm[1]);
+            const d = Number(dateMatch[1]);
+            const mon = Number(dateMatch[2]);
+            const y = Number(dateMatch[3]);
+            const composed = new Date(y, mon - 1, d, h, min, 0, 0);
             if (!Number.isFinite(composed.getTime())) return null;
             if (isEnd) {{
-                composed.setHours(23, 59, 59, 999);
+                composed.setSeconds(59, 999);
             }}
             return composed;
         }}
@@ -1611,8 +1758,8 @@ def create_dashboard(json_filepath, html_filepath):
                 return {{ start: start, end: now }};
             }}
             if (preset === 'custom') {{
-                const start = parseCustomRangeDateTime(dashboardState.customStartDate, false);
-                const end = parseCustomRangeDateTime(dashboardState.customEndDate, true);
+                const start = parseCustomRangeDateTime(dashboardState.customStartDate, dashboardState.customStartTime, false);
+                const end = parseCustomRangeDateTime(dashboardState.customEndDate, dashboardState.customEndTime, true);
                 return {{ start: start, end: end }};
             }}
             return {{ start: null, end: null }};
@@ -1701,8 +1848,12 @@ def create_dashboard(json_filepath, html_filepath):
         function syncTimeInputsFromState() {{
             const startDateEl = document.getElementById('time-custom-start-date');
             const endDateEl = document.getElementById('time-custom-end-date');
+            const startTimeEl = document.getElementById('time-custom-start-time');
+            const endTimeEl = document.getElementById('time-custom-end-time');
             if (startDateEl) startDateEl.value = dashboardState.customStartDate || '';
             if (endDateEl) endDateEl.value = dashboardState.customEndDate || '';
+            if (startTimeEl) startTimeEl.value = dashboardState.customStartTime || '';
+            if (endTimeEl) endTimeEl.value = dashboardState.customEndTime || '';
         }}
 
         function getCasesFromLegacyRows(run) {{
@@ -1742,7 +1893,7 @@ def create_dashboard(json_filepath, html_filepath):
         }}
 
         function getRunOptionLabel(run, idx) {{
-            const ts = run.timestamp ? run.timestamp.slice(0, 16).replace('T', ' ') : run.label;
+            const ts = getRunDateDisplay(run);
             return '#' + (idx + 1) + ' · ' + ts + ' · ' + run.filename;
         }}
 
@@ -2052,7 +2203,7 @@ def create_dashboard(json_filepath, html_filepath):
             document.getElementById('view-compare').classList.remove('hidden');
 
             document.getElementById('compare-title').textContent =
-                'Comparing ' + leftRun.label + ' vs ' + rightRun.label;
+                'Comparing ' + getRunDateDisplay(leftRun) + ' vs ' + getRunDateDisplay(rightRun);
 
             renderCompareRunSide('compare-left', leftRun);
             renderCompareRunSide('compare-right', rightRun);
@@ -2377,7 +2528,7 @@ def create_dashboard(json_filepath, html_filepath):
                                 '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Test Case ID</div><div class=\"text-gray-200 font-mono mt-1\">' + escapeHtml(caseItem.name || '') + '</div></div>' +
                                 '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Status</div><div class=\"mt-1\"><span class=\"px-2 py-0.5 rounded border text-[11px] ' + statusCls + '\">' + escapeHtml(caseItem.status || 'Unknown') + '</span></div></div>' +
                                 '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Order</div><div class=\"text-gray-200 mt-1\">' + String(idx + 1) + '</div></div>' +
-                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Timestamp</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.timestamp || '') + '</div></div>' +
+                                '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Timestamp</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(formatDateValue(caseItem.timestamp || '')) + '</div></div>' +
                                 '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Source File</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.source_file || '') + '</div></div>' +
                                 '<div><div class=\"text-gray-500 uppercase tracking-wider text-[10px]\">Primary Metric</div><div class=\"text-gray-300 mt-1\">' + escapeHtml(caseItem.metric_kind || '') + ' ' + escapeHtml(caseItem.metric || '') + ' · ' + Number(caseItem.metric_score || 0).toFixed(3) + '</div></div>' +
                             '</div>' +
@@ -2616,10 +2767,67 @@ def create_dashboard(json_filepath, html_filepath):
         }}
 
         function setupTimeFilterControls() {{
+            function asTimeInputValue(dateObj) {{
+                return pad2(dateObj.getHours()) + ':' + pad2(dateObj.getMinutes());
+            }}
+            function attachDateAutoFormat(inputEl) {{
+                if (!inputEl) return;
+                inputEl.addEventListener('input', function() {{
+                    const digits = String(inputEl.value || '').replace(/\D/g, '').slice(0, 8);
+                    if (!digits) {{
+                        inputEl.value = '';
+                        return;
+                    }}
+                    if (digits.length <= 2) {{
+                        inputEl.value = digits.length === 2 ? (digits + '/') : digits;
+                        return;
+                    }}
+                    if (digits.length <= 4) {{
+                        inputEl.value = digits.slice(0, 2) + '/' + digits.slice(2) + (digits.length === 4 ? '/' : '');
+                        return;
+                    }}
+                    inputEl.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+                }});
+                inputEl.addEventListener('blur', function() {{
+                    const normalized = normalizeDateDdMmYyyy(inputEl.value || '');
+                    if (normalized) inputEl.value = normalized;
+                }});
+            }}
+            function attachTimeAutoFormat(inputEl) {{
+                if (!inputEl) return;
+                inputEl.addEventListener('input', function() {{
+                    const digits = String(inputEl.value || '').replace(/\\D/g, '').slice(0, 4);
+                    if (!digits) {{
+                        inputEl.value = '';
+                        return;
+                    }}
+                    if (digits.length <= 2) {{
+                        inputEl.value = digits.length === 2 ? (digits + ':') : digits;
+                        if (digits.length === 2) {{
+                            inputEl.setSelectionRange(3, 3);
+                        }}
+                        return;
+                    }}
+                    inputEl.value = digits.slice(0, 2) + ':' + digits.slice(2);
+                }});
+                inputEl.addEventListener('keydown', function(e) {{
+                    if (e.key !== 'Backspace') return;
+                    const pos = inputEl.selectionStart;
+                    if (pos === 3 && inputEl.selectionEnd === 3 && String(inputEl.value || '').charAt(2) === ':') {{
+                        e.preventDefault();
+                        inputEl.value = String(inputEl.value || '').slice(0, 2);
+                        inputEl.setSelectionRange(2, 2);
+                    }}
+                }});
+                inputEl.addEventListener('blur', function() {{
+                    const normalized = normalizeTime24h(inputEl.value || '');
+                    if (normalized) inputEl.value = normalized;
+                }});
+            }}
             const errEl = document.getElementById('time-filter-error');
             document.querySelectorAll('.time-filter-btn').forEach(function(btn) {{
                 btn.addEventListener('click', function() {{
-                    const preset = String(btn.getAttribute('data-time-preset') || '12m').toLowerCase();
+                    const preset = String(btn.getAttribute('data-time-preset') || 'today').toLowerCase();
                     dashboardState.timeRangePreset = preset;
                     if (errEl) errEl.textContent = '';
                     if (preset !== 'custom') {{
@@ -2644,10 +2852,16 @@ def create_dashboard(json_filepath, html_filepath):
 
             const startDateEl = document.getElementById('time-custom-start-date');
             const endDateEl = document.getElementById('time-custom-end-date');
+            const startTimeEl = document.getElementById('time-custom-start-time');
+            const endTimeEl = document.getElementById('time-custom-end-time');
             const applyBtn = document.getElementById('time-custom-apply');
             const resetBtn = document.getElementById('time-custom-reset');
+            attachDateAutoFormat(startDateEl);
+            attachDateAutoFormat(endDateEl);
+            attachTimeAutoFormat(startTimeEl);
+            attachTimeAutoFormat(endTimeEl);
 
-            [startDateEl, endDateEl].forEach(function(inputEl) {{
+            [startDateEl, endDateEl, startTimeEl, endTimeEl].forEach(function(inputEl) {{
                 if (!inputEl) return;
                 inputEl.addEventListener('focus', function() {{
                     if (typeof inputEl.showPicker === 'function') {{
@@ -2662,8 +2876,21 @@ def create_dashboard(json_filepath, html_filepath):
 
             if (applyBtn) {{
                 applyBtn.addEventListener('click', function() {{
-                    dashboardState.customStartDate = startDateEl ? String(startDateEl.value || '') : '';
-                    dashboardState.customEndDate = endDateEl ? String(endDateEl.value || '') : '';
+                    dashboardState.customStartDate = startDateEl ? normalizeDateDdMmYyyy(startDateEl.value || '') : '';
+                    dashboardState.customEndDate = endDateEl ? normalizeDateDdMmYyyy(endDateEl.value || '') : '';
+                    dashboardState.customStartTime = startTimeEl ? normalizeTime24h(startTimeEl.value || '') : '';
+                    dashboardState.customEndTime = endTimeEl ? normalizeTime24h(endTimeEl.value || '') : '';
+
+                    if ((startDateEl && String(startDateEl.value || '').trim() && !dashboardState.customStartDate) ||
+                        (endDateEl && String(endDateEl.value || '').trim() && !dashboardState.customEndDate)) {{
+                        if (errEl) errEl.textContent = 'Use date format DD/MM/YYYY.';
+                        return;
+                    }}
+                    if ((startTimeEl && String(startTimeEl.value || '').trim() && !dashboardState.customStartTime) ||
+                        (endTimeEl && String(endTimeEl.value || '').trim() && !dashboardState.customEndTime)) {{
+                        if (errEl) errEl.textContent = 'Use 24H time format HH:MM (00:00-23:59).';
+                        return;
+                    }}
 
                     const bounds = getTimeRangeBounds();
                     if (!bounds.start || !bounds.end) {{
@@ -2682,9 +2909,11 @@ def create_dashboard(json_filepath, html_filepath):
             if (resetBtn) {{
                 resetBtn.addEventListener('click', function() {{
                     const now = new Date();
-                    const yyyyMmDd = now.toISOString().slice(0, 10);
-                    dashboardState.customStartDate = yyyyMmDd;
-                    dashboardState.customEndDate = yyyyMmDd;
+                    const ddMmYyyy = formatDateForInput(now);
+                    dashboardState.customStartDate = ddMmYyyy;
+                    dashboardState.customEndDate = ddMmYyyy;
+                    dashboardState.customStartTime = '00:00';
+                    dashboardState.customEndTime = asTimeInputValue(now);
                     syncTimeInputsFromState();
                     if (errEl) errEl.textContent = '';
                 }});
@@ -2693,8 +2922,10 @@ def create_dashboard(json_filepath, html_filepath):
             const defaultEnd = new Date();
             const defaultStart = new Date(defaultEnd);
             defaultStart.setDate(defaultStart.getDate() - 30);
-            dashboardState.customStartDate = defaultStart.toISOString().slice(0, 10);
-            dashboardState.customEndDate = defaultEnd.toISOString().slice(0, 10);
+            dashboardState.customStartDate = formatDateForInput(defaultStart);
+            dashboardState.customEndDate = formatDateForInput(defaultEnd);
+            dashboardState.customStartTime = '00:00';
+            dashboardState.customEndTime = '23:59';
             syncTimeInputsFromState();
             updateTimePresetButtons();
         }}
@@ -2709,7 +2940,7 @@ def create_dashboard(json_filepath, html_filepath):
             // Properties card
             document.getElementById('detail-filename').textContent = run.filename;
             document.getElementById('detail-evaluator').textContent = run.evaluator_type;
-            const ts = run.timestamp ? run.timestamp.slice(0, 16).replace('T', ' ') : run.label;
+            const ts = getRunDateDisplay(run);
             document.getElementById('detail-timestamp').textContent = ts;
             document.getElementById('detail-total').textContent = run.total + ' test cases';
 
@@ -2794,6 +3025,7 @@ def create_dashboard(json_filepath, html_filepath):
             }});
         }}
         setupCompareMenu();
+        normalizeRunRowDateCells();
         setupRunsTablePagination();
     </script>
 </body>

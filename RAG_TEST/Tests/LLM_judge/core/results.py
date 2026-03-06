@@ -82,7 +82,7 @@ def save_initial_results(qa_pairs: list, evaluator_type: str, output_filepath: s
             "generated_answer": qa_pair.get("generated_answer", ""),
             "expected_answer": qa_pair.get("expected_answer", ""),
             "metadata": qa_pair.get("metadata", ""),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now().strftime("%d_%m_%Y"),
             "evaluation_metrics": None,
             "status": "pending",
         }

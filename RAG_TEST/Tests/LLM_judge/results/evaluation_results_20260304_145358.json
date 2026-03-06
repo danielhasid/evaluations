@@ -6,7 +6,7 @@
       "generated_answer": "Python is a high-level, interpreted programming language. It was created by Guido van Rossum and first released in 1991. Python is designed to be easy to read and write. It is widely used for web development, data analysis, artificial intelligence, scientific computing, and many other types of programming.",
       "expected_answer": "A high-level programming language.",
       "metadata": "general",
-      "timestamp": "2026-03-04T14:54:08.150930",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 0.9019719130411696,
@@ -41,7 +41,7 @@
       "generated_answer": "Async/await in Python are keywords that are used to handle asynchronous programming, which is a method of concurrent execution of tasks. \n\nAsync keyword declares a function as a coroutine, which is a special kind of asynchronous function that can be paused and resumed, allowing other code to run during the \"pauses\".\n\nAwait keyword is used to pause the execution of the coroutine until the result is ready. This allows the program to leave the coroutine and do other work, and then resume the coroutine later, when the awaited operation is finished.\n\nThis feature is useful in tasks like web scraping or other I/O operations where waiting for a response can take a while, and you don't want to block the rest of your program from running during this waiting period.",
       "expected_answer": "'async' defines a coroutine and 'await' pauses until an awaitable completes.",
       "metadata": "advanced",
-      "timestamp": "2026-03-04T14:54:08.150930",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 1.0,
@@ -76,7 +76,7 @@
       "generated_answer": "A tuple is an immutable sequence type in Python programming. It's a data structure that can store multiple items in a single variable. Tuple items are ordered, unchangeable, and allow duplicate values.",
       "expected_answer": "An immutable ordered sequence in Python.",
       "metadata": "data_structures",
-      "timestamp": "2026-03-04T14:54:08.150930",
+      "timestamp": "04_03_2026",
       "evaluation_metrics": {
         "Fluency [GEval]": {
           "score": 1.0,
