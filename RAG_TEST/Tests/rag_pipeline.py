@@ -147,3 +147,25 @@ def setup():
 if __name__ == "__main__":
     setup()
     print("✅ Ready. Call `generate_answer(query)` from test or script.")
+
+
+# ─────────────────────────────────────
+# CHROMA RETRIEVER (ready to use - replace FAISS when needed)
+# ─────────────────────────────────────
+# HOW TO ACTIVATE:
+#   1. Uncomment the block below.
+#   2. Replace calls to retrieve() with get_chroma_retriever() in generate_answer().
+#   3. Make sure persist_directory and collection_name match your indexed Chroma DB.
+#   4. The embedding model MUST match the one used when the DB was built.
+#
+# from langchain_openai import OpenAIEmbeddings
+# from langchain_chroma import Chroma
+#
+# def get_chroma_retriever(k: int = MAX_CONTEXTS):
+#     embeddings = OpenAIEmbeddings(model=EMBED_MODEL)
+#     vectorstore = Chroma(
+#         collection_name="rag_docs",   # must match collection name used at index time
+#         persist_directory="./chroma_db",  # path to your persisted Chroma DB on disk
+#         embedding_function=embeddings,
+#     )
+#     return vectorstore.as_retriever(search_kwargs={"k": k})
