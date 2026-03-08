@@ -87,7 +87,7 @@ class EvaluationCenterFacade:
         summary = generate_evaluation_summary(output_json, self.api_key)
         save_summary_to_json(output_json, summary)
         output_dir = _os.path.dirname(_os.path.abspath(output_json)) or "."
-        dashboard_path = _os.path.join(output_dir, "confident_ai_dashboard.html")
+        dashboard_path = _os.path.join(output_dir, "Evaluation_dashbord.html")
         log_stage(f"\n[DASHBOARD] Regenerating dashboard from all runs in: {output_dir}")
         try:
             create_dashboard(output_dir, dashboard_path)

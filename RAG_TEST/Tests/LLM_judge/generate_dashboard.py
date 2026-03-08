@@ -2054,7 +2054,7 @@ def create_dashboard(json_filepath, html_filepath):
             if (!els.title || !els.subtitle || !els.badge) return;
             if (mode === 'preview' && run) {{
                 els.title.textContent = 'Question Scores';
-                els.subtitle.textContent = 'Questions on X axis · combined score and metric lines on Y axis';
+                els.subtitle.textContent = 'Questions on X axis · per-metric scores on Y axis';
                 els.badge.textContent = 'Scores';
                 return;
             }}
@@ -2227,40 +2227,16 @@ def create_dashboard(json_filepath, html_filepath):
                 const questionTexts = cases.map(function(caseItem, idx) {{
                     return caseItem.question || caseItem.name || ('Question ' + String(idx + 1));
                 }});
-                const scores = cases.map(function(caseItem) {{
-                    return getCasePreviewScore(caseItem);
-                }});
                 const statuses = cases.map(function(caseItem) {{
                     return String(caseItem.status || 'Unknown');
-                }});
-                const combinedColors = statuses.map(function(status) {{
-                    return normalizeStatusKind(status) === 'fail' ? 'rgba(244,63,94,0.75)' : 'rgba(16,185,129,0.75)';
-                }});
-                const combinedBorderColors = statuses.map(function(status) {{
-                    return normalizeStatusKind(status) === 'fail' ? '#f43f5e' : '#10b981';
                 }});
                 const metricNames = Array.from(new Set(cases.flatMap(function(caseItem) {{
                     return Object.keys(caseItem.evaluation_metrics || {{}});
                 }}))).sort();
-                const datasets = [{{
-                    label: 'Combined score',
-                    data: scores,
-                    rawScores: scores,
-                    questionTexts: questionTexts,
-                    caseStatuses: statuses,
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    borderColor: '#f8fafc',
-                    borderWidth: 2.5,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: combinedBorderColors,
-                    pointBorderColor: combinedBorderColors,
-                    tension: 0.25,
-                    fill: false,
-                    spanGaps: true,
-                }}];
+                const datasets = [];
                 metricNames.forEach(function(metricName, metricIdx) {{
-                    const color = getMetricColor(metricName, metricIdx);
+                    const color = (previewRun.metric_colors && previewRun.metric_colors[metricName])
+                        || getMetricColor(metricName, metricIdx);
                     const metricScores = cases.map(function(caseItem) {{
                         return getCaseMetricScore(caseItem, metricName);
                     }});
@@ -3997,16 +3973,16 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
         input_source = "results" if Path("results").is_dir() else "evaluation_results.json"
-        output_html = "results/confident_ai_dashboard.html"
+        output_html = "results/Evaluation_dashbord.html"
     elif len(args) == 1:
         input_source = args[0]
-        output_html = "results/confident_ai_dashboard.html"
+        output_html = "results/Evaluation_dashbord.html"
     else:
         if args[-1].lower().endswith(".html"):
             output_html = args[-1]
             input_source = args[:-1] if len(args[:-1]) > 1 else args[0]
         else:
             input_source = args
-            output_html = "results/confident_ai_dashboard.html"
+            output_html = "results/Evaluation_dashbord.html"
 
     create_dashboard(input_source, output_html)

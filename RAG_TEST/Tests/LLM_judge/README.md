@@ -335,7 +335,7 @@ The GPT-4o analysis summary is appended to the same file automatically.
 
 ### Dashboard Notes
 
-- The dashboard is regenerated automatically after each run at `results/confident_ai_dashboard.html`.
+- The dashboard is regenerated automatically after each run at `results/Evaluation_dashbord.html`.
 - The runs view supports filtering by evaluator (`All`, `GEval`, `RAG`), and the performance graph updates to match the selected filter.
 - If two metrics have exactly the same values across runs, their lines can overlap visually (for example, `FaithfulnessMetric` and `AnswerRelevancyMetric` both at `1.0`).
 

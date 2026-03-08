@@ -24,7 +24,7 @@ class RunConfig:
     metrics: List[str] = field(default_factory=list)
     generate_summary: bool = True
     generate_dashboard: bool = True
-    dashboard_filename: str = "confident_ai_dashboard.html"
+    dashboard_filename: str = "Evaluation_dashbord.html"
     truths_extraction_limit: Optional[int] = None
 
 

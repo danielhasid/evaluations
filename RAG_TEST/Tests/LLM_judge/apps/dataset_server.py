@@ -40,7 +40,7 @@ app = Flask(__name__)
 # The project root is the LLM_judge directory; file browsing is restricted here
 PROJECT_ROOT = _ROOT
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
-DASHBOARD_FILE = os.path.join(RESULTS_DIR, "confident_ai_dashboard.html")
+DASHBOARD_FILE = os.path.join(RESULTS_DIR, "Evaluation_dashbord.html")
 
 
 # ─────────────────────────────────────
@@ -84,6 +84,21 @@ def _write_csv(filepath: str, columns: list, rows: list) -> None:
 def index():
     if os.path.exists(DASHBOARD_FILE):
         return send_file(DASHBOARD_FILE)
+    # Fallback: find any dashboard HTML in the results directory
+    if os.path.isdir(RESULTS_DIR):
+        candidates = [
+            f for f in os.listdir(RESULTS_DIR)
+            if f.lower().endswith(".html")
+        ]
+        if candidates:
+            # Prefer files with 'dashboard' or 'evaluation' in the name
+            candidates.sort(key=lambda f: (
+                0 if ("dashboard" in f.lower() or "evaluation" in f.lower()) else 1,
+                os.path.getmtime(os.path.join(RESULTS_DIR, f))
+            ), reverse=False)
+            fallback = os.path.join(RESULTS_DIR, candidates[0])
+            print(f"[WARN] Expected {DASHBOARD_FILE!r} not found. Serving fallback: {fallback!r}")
+            return send_file(fallback)
     return "<h2>Dashboard not found. Run an evaluation first to generate it.</h2>", 404
 
 
