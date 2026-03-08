@@ -959,7 +959,7 @@ def create_dashboard(json_filepath, html_filepath):
                 <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                     <span class="text-gray-400 text-sm font-medium">Total Runs</span>
                     <div id="stat-total-runs" class="text-2xl font-bold mt-1 text-white">{total_runs}</div>
-                    <div class="text-xs text-gray-500 mt-1">source JSON files</div>
+                    <div id="stat-total-runs-label" class="text-xs text-gray-500 mt-1">source JSON files</div>
                 </div>
                 <div class="glass-panel p-5 flex-1 flex flex-col justify-center">
                     <span class="text-gray-400 text-sm font-medium">Overall Pass Rate</span>
@@ -3294,7 +3294,16 @@ def create_dashboard(json_filepath, html_filepath):
             const pageTotal = document.getElementById('runs-page-total');
             if (pageTotal) pageTotal.textContent = String(totalPages);
 
-            renderSummaryCards(filteredEntries);
+            const previewRunForCards = getPreviewRun();
+            if (previewRunForCards) {{
+                renderSummaryCards([{{ run: previewRunForCards, idx: dashboardState.previewRunIdx }}]);
+                const labelEl = document.getElementById('stat-total-runs-label');
+                if (labelEl) labelEl.textContent = 'selected run';
+            }} else {{
+                renderSummaryCards(filteredEntries);
+                const labelEl = document.getElementById('stat-total-runs-label');
+                if (labelEl) labelEl.textContent = 'source JSON files';
+            }}
             renderRunsChartForEntries(filteredEntries);
             updateRunsChartHighlightRange(start, end);
             updateRunInteractionUI();
