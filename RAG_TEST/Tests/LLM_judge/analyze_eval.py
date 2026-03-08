@@ -90,7 +90,10 @@ def save_summary_to_json(json_file_path, summary_text):
     with open(json_file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    print(f"\n💾 Analysis summary saved to: {json_file_path}")
+    try:
+        print(f"\n💾 Analysis summary saved to: {json_file_path}")
+    except UnicodeEncodeError:
+        print(f"\n[SAVED] Analysis summary saved to: {json_file_path}")
 
 
 # Run the function

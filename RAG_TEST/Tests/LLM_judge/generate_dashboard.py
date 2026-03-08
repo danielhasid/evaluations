@@ -244,7 +244,7 @@ def _normalize_dashboard_inputs(json_input) -> list:
     for raw_path in candidates:
         p = Path(raw_path)
         if p.is_dir():
-            eval_json = sorted(str(fp) for fp in p.glob("evaluation_results*.json"))
+            eval_json = sorted(str(fp) for fp in p.glob("*evaluation_results*.json"))
             files.extend(eval_json if eval_json else sorted(str(fp) for fp in p.glob("*.json")))
         else:
             files.append(str(p))
@@ -527,15 +527,26 @@ def _build_per_run_summaries(source_files: list) -> list:
 
         # Build short label for chart x-axis
         label = _format_date_ddmmyyyy(first_ts) if first_ts else source_name
-        ts_match = re.search(r'(\d{8}_\d{6})', source_name)
+        # Try new filename format: DD_MM_YYYY_HHMMSS  (e.g. GEval_..._08_03_2026_111835)
+        ts_match = re.search(r'(\d{2}_\d{2}_\d{4}_\d{6})', source_name)
         if ts_match:
             ts_raw = ts_match.group(1)
             try:
-                dt = datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
-                label = dt.strftime("%d-%m-%Y")
+                dt = datetime.strptime(ts_raw, "%d_%m_%Y_%H%M%S")
+                label = dt.strftime("%d-%m-%Y %H:%M")
             except ValueError:
-                label = _format_date_ddmmyyyy(ts_raw)
-        elif len(label) > 22:
+                pass
+        else:
+            # Try old filename format: YYYYMMDD_HHMMSS  (e.g. evaluation_results_20260304_145358)
+            ts_match = re.search(r'(\d{8}_\d{6})', source_name)
+            if ts_match:
+                ts_raw = ts_match.group(1)
+                try:
+                    dt = datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
+                    label = dt.strftime("%d-%m-%Y %H:%M")
+                except ValueError:
+                    label = _format_date_ddmmyyyy(ts_raw)
+        if label == source_name and len(label) > 22:
             label = label[:19] + "..."
 
         runs.append({
@@ -582,6 +593,14 @@ def create_dashboard(json_filepath, html_filepath):
             except ValueError:
                 pass
         name = run_obj.get("filename", "")
+        # New filename format: DD_MM_YYYY_HHMMSS  (e.g. GEval_..._08_03_2026_111835)
+        ts_match = re.search(r'(\d{2}_\d{2}_\d{4}_\d{6})', name)
+        if ts_match:
+            try:
+                return datetime.strptime(ts_match.group(1), "%d_%m_%Y_%H%M%S")
+            except ValueError:
+                pass
+        # Old filename format: YYYYMMDD_HHMMSS  (e.g. evaluation_results_20260304_145358)
         ts_match = re.search(r'(\d{8}_\d{6})', name)
         if ts_match:
             try:
@@ -808,11 +827,11 @@ def create_dashboard(json_filepath, html_filepath):
         <div class="p-3">
             <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-3 mt-4">Evaluation &amp; Observability</p>
             <nav class="space-y-1">
-                <a href="#" onclick="showRuns(); return false;" class="nav-item active" id="nav-evaluation">
+                <a href="javascript:void(0)" onclick="showRuns();" class="nav-item active" id="nav-evaluation">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     Evaluation
                 </a>
-                <a href="#" class="nav-item">
+                <a href="javascript:void(0)" onclick="showDatasets();" class="nav-item" id="nav-datasets">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                     Datasets
                 </a>
@@ -997,8 +1016,619 @@ def create_dashboard(json_filepath, html_filepath):
 
 
         <!-- ══════════════════════════════════════════════════════════════════
-             VIEW: RUN DETAIL (hidden until a row is clicked)
+             VIEW: DATASETS (hidden until Datasets nav item is clicked)
         ════════════════════════════════════════════════════════════════════ -->
+        <div id="view-datasets" class="hidden p-8">
+
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-white">Dataset Manager</h1>
+                <p class="text-gray-400 text-sm mt-1">Browse, edit, and run evaluations on any CSV dataset.</p>
+            </div>
+
+            <div class="flex gap-6" style="min-height:70vh;">
+
+                <!-- ── File Browser Panel ─────────────────────────────── -->
+                <div class="w-72 flex-shrink-0 rounded-xl border border-gray-800 bg-[#0d0f14] flex flex-col" style="max-height:80vh;">
+                    <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">File Browser</span>
+                        <button id="ds-browse-up" onclick="dsBrowseUp()" title="Go up"
+                            class="text-gray-500 hover:text-white transition-colors text-lg leading-none">&uarr;</button>
+                    </div>
+                    <div class="px-3 py-2 border-b border-gray-800">
+                        <p id="ds-current-path" class="text-[10px] text-gray-500 break-all truncate" title=""></p>
+                    </div>
+                    <div id="ds-browser-list" class="flex-1 overflow-y-auto p-2 space-y-0.5 text-sm"></div>
+                </div>
+
+                <!-- ── Right Panel ────────────────────────────────────── -->
+                <div class="flex-1 flex flex-col gap-5 min-w-0">
+
+                    <!-- Selected file + Load -->
+                    <div class="rounded-xl border border-gray-800 bg-[#0d0f14] px-5 py-4 flex items-center gap-3">
+                        <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <input id="ds-selected-path" type="text" readonly
+                            placeholder="Click a .csv file in the browser to select it"
+                            class="flex-1 bg-transparent text-gray-300 text-sm outline-none placeholder-gray-600 min-w-0 truncate"/>
+                        <button onclick="dsLoadCSV()"
+                            class="flex-shrink-0 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+                            Load
+                        </button>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="rounded-xl border border-gray-800 bg-[#0d0f14] flex flex-col" style="flex:1; min-height:0;">
+                        <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Rows
+                                <span id="ds-row-count" class="ml-2 text-gray-600 font-normal normal-case"></span>
+                            </span>
+                            <button onclick="dsAddRow()"
+                                class="px-3 py-1 rounded-lg border border-gray-700 hover:border-indigo-500 text-gray-400 hover:text-white text-xs font-medium transition-colors flex items-center gap-1">
+                                <span class="text-lg leading-none">+</span> Add Row
+                            </button>
+                        </div>
+                        <div class="overflow-auto flex-1">
+                            <table class="w-full text-xs text-left text-gray-300 border-collapse" id="ds-table">
+                                <thead id="ds-thead" class="sticky top-0 bg-[#0d0f14] text-gray-500 border-b border-gray-800"></thead>
+                                <tbody id="ds-tbody"></tbody>
+                            </table>
+                            <p id="ds-table-empty" class="text-center text-gray-600 py-12 text-sm">Load a CSV to view its contents.</p>
+                        </div>
+                        <!-- Save bar -->
+                        <div id="ds-save-bar" class="hidden px-5 py-3 border-t border-gray-800 flex items-center justify-between gap-4">
+                            <span class="text-xs text-yellow-400">Unsaved changes</span>
+                            <div class="flex gap-2">
+                                <button onclick="dsDiscardChanges()"
+                                    class="px-3 py-1 rounded-lg border border-gray-700 hover:border-red-500 text-gray-400 hover:text-red-400 text-xs transition-colors">
+                                    Discard
+                                </button>
+                                <button onclick="dsSaveCSV()"
+                                    class="px-3 py-1 rounded-lg bg-green-700 hover:bg-green-600 text-white text-xs font-medium transition-colors">
+                                    Save to CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Run Evaluation Panel -->
+                    <div class="rounded-xl border border-gray-800 bg-[#0d0f14] px-5 py-4">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Run Evaluation</p>
+                        <div class="flex flex-wrap gap-6 items-start">
+                            <!-- Type selector -->
+                            <div>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Dataset Type</p>
+                                <div class="flex gap-2">
+                                    <button id="ds-type-llm" onclick="dsSelectType('llm')"
+                                        class="px-3 py-1.5 rounded-lg border border-indigo-500 bg-indigo-600 text-white text-xs font-medium transition-colors">
+                                        LLM (GEval)
+                                    </button>
+                                    <button id="ds-type-rag" onclick="dsSelectType('rag')"
+                                        class="px-3 py-1.5 rounded-lg border border-gray-700 text-xs font-medium transition-colors text-gray-400 hover:text-white">
+                                        RAG
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Metrics -->
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Metrics</p>
+                                <div id="ds-metrics-checkboxes" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <button id="ds-run-btn" onclick="dsRunEvaluation()"
+                                class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Run Evaluation
+                            </button>
+                            <button id="ds-stop-btn" onclick="dsStopEvaluation()"
+                                class="hidden px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-semibold transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <rect x="9" y="9" width="6" height="6" fill="currentColor" rx="1"/>
+                                </svg>
+                                Stop
+                            </button>
+                            <span id="ds-run-spinner" class="hidden text-indigo-400 text-xs animate-pulse">Running...</span>
+                        </div>
+                        <!-- Log output -->
+                        <pre id="ds-run-log"
+                            class="hidden mt-3 rounded-lg bg-[#050506] border border-gray-800 p-3 text-[11px] text-green-400 whitespace-pre-wrap max-h-48 overflow-y-auto font-mono"></pre>
+                    </div>
+
+                </div><!-- /right panel -->
+            </div><!-- /flex row -->
+
+        </div><!-- /view-datasets -->
+
+
+        <!-- Edit Row Modal -->
+        <div id="ds-row-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div class="bg-[#0d0f14] border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+                <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                    <h2 id="ds-modal-title" class="text-base font-bold text-white">Edit Row</h2>
+                    <button onclick="dsCloseModal()" class="text-gray-500 hover:text-white transition-colors text-xl">&times;</button>
+                </div>
+                <div id="ds-modal-fields" class="flex-1 overflow-y-auto px-6 py-4 space-y-4"></div>
+                <div class="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
+                    <button onclick="dsCloseModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">Cancel</button>
+                    <button onclick="dsModalSave()"
+                        class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">Save Row</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             DATASETS  JavaScript
+        ════════════════════════════════════════════════════════════════════ -->
+        <script>
+        (function() {{
+            // ── State ──────────────────────────────────────────────────────
+            var ds = {{
+                currentBrowsePath: null,
+                selectedFilePath: null,
+                columns: [],
+                rows: [],
+                originalRows: null,  // snapshot for discard
+                dirty: false,
+                evalType: 'llm',
+                allMetrics: {{ llm: [], rag: [] }},
+                runPollInterval: null,
+                modalRowIdx: null,   // null = new row
+            }};
+
+            var LLM_METRIC_LABELS = {{
+                fluency: 'Fluency',
+                relevance: 'Relevance',
+                correctness: 'Correctness',
+                hallucination: 'Hallucination'
+            }};
+            var RAG_METRIC_LABELS = {{
+                answer_relevancy: 'Answer Relevancy',
+                faithfulness: 'Faithfulness',
+                contextual_precision: 'Contextual Precision',
+                contextual_recall: 'Contextual Recall',
+                contextual_relevancy: 'Contextual Relevancy'
+            }};
+
+            // ── Utilities ──────────────────────────────────────────────────
+            function esc(str) {{
+                return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            }}
+
+            function showEl(id)  {{ var e = document.getElementById(id); if (e) e.classList.remove('hidden'); }}
+            function hideEl(id)  {{ var e = document.getElementById(id); if (e) e.classList.add('hidden'); }}
+
+            // ── Initialise on first show ───────────────────────────────────
+            window.showDatasets = function() {{
+                // Hide all other views
+                var viewRuns = document.getElementById('view-runs');
+                var viewDetail = document.getElementById('view-detail');
+                var viewCompare = document.getElementById('view-compare');
+                if (viewRuns) viewRuns.classList.add('hidden');
+                if (viewDetail) viewDetail.classList.add('hidden');
+                if (viewCompare) viewCompare.classList.add('hidden');
+                showEl('view-datasets');
+
+                // Update nav active state
+                var navEval = document.getElementById('nav-evaluation');
+                var navDs   = document.getElementById('nav-datasets');
+                if (navEval) navEval.classList.remove('active');
+                if (navDs)   navDs.classList.add('active');
+
+                if (!ds.currentBrowsePath) {{
+                    dsBrowse(null);
+                }}
+                if (ds.allMetrics.llm.length === 0) {{
+                    dsLoadMetrics();
+                }}
+                dsSelectType(ds.evalType || 'llm');
+
+                // If a run is already in progress (e.g. server restarted mid-run),
+                // resume polling so the UI stays in sync.
+                if (!ds.runPollInterval) {{
+                    fetch('/run/status')
+                        .then(function(r) {{ return r.json(); }})
+                        .then(function(data) {{
+                            if (data.running) {{
+                                showEl('ds-run-spinner');
+                                showEl('ds-stop-btn');
+                                var runBtn = document.getElementById('ds-run-btn');
+                                if (runBtn) runBtn.disabled = true;
+                                dsPollRunStatus();
+                            }}
+                        }})
+                        .catch(function() {{}});
+                }}
+            }};
+
+            // Stop polling when navigating away from Datasets view
+            window._dsStopPolling = function() {{
+                if (ds.runPollInterval) {{
+                    clearInterval(ds.runPollInterval);
+                    ds.runPollInterval = null;
+                }}
+            }};
+
+            // ── File Browser ───────────────────────────────────────────────
+            function dsBrowse(path) {{
+                var url = '/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+                var list = document.getElementById('ds-browser-list');
+                if (list) list.innerHTML = '<p class="text-center text-gray-600 py-6 text-xs">Loading...</p>';
+                fetch(url)
+                    .then(function(r) {{ return r.json(); }})
+                    .then(function(data) {{
+                        if (data.error) {{ alert(data.error); return; }}
+                        ds.currentBrowsePath = data.current;
+
+                        var pathEl = document.getElementById('ds-current-path');
+                        if (pathEl) {{
+                            pathEl.textContent = data.current;
+                            pathEl.title = data.current;
+                        }}
+
+                        var list = document.getElementById('ds-browser-list');
+                        if (!list) return;
+                        list.innerHTML = '';
+
+                        // Parent link
+                        if (data.parent) {{
+                            var upBtn = document.createElement('button');
+                            upBtn.className = 'w-full text-left px-2 py-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-800 transition-colors flex items-center gap-2 text-xs';
+                            upBtn.innerHTML = '<span class="text-base">&#8593;</span> ..';
+                            upBtn.onclick = (function(p) {{ return function() {{ dsBrowse(p); }}; }})(data.parent);
+                            list.appendChild(upBtn);
+                        }}
+
+                        // Folders
+                        data.folders.forEach(function(folder) {{
+                            var btn = document.createElement('button');
+                            btn.className = 'w-full text-left px-2 py-1.5 rounded text-yellow-400/80 hover:text-yellow-300 hover:bg-gray-800 transition-colors flex items-center gap-2 text-xs truncate';
+                            btn.innerHTML = '<svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg><span class="truncate">' + esc(folder) + '</span>';
+                            var fullPath = data.current + '\\\\' + folder;
+                            btn.onclick = (function(fp) {{ return function() {{ dsBrowse(fp); }}; }})(fullPath);
+                            list.appendChild(btn);
+                        }});
+
+                        // CSV files
+                        data.files.forEach(function(file) {{
+                            var btn = document.createElement('button');
+                            var fullPath = data.current + '\\\\' + file;
+                            var isSelected = (fullPath === ds.selectedFilePath);
+                            btn.className = 'w-full text-left px-2 py-1.5 rounded transition-colors flex items-center gap-2 text-xs truncate ' +
+                                (isSelected ? 'bg-indigo-900/50 text-indigo-300' : 'text-gray-300 hover:text-white hover:bg-gray-800');
+                            btn.innerHTML = '<svg class="w-3.5 h-3.5 flex-shrink-0 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><span class="truncate">' + esc(file) + '</span>';
+                            btn.onclick = (function(fp) {{
+                                return function() {{
+                                    ds.selectedFilePath = fp;
+                                    var inp = document.getElementById('ds-selected-path');
+                                    if (inp) inp.value = fp;
+                                    dsBrowse(ds.currentBrowsePath);  // refresh to highlight
+                                }};
+                            }})(fullPath);
+                            list.appendChild(btn);
+                        }});
+
+                        if (data.folders.length === 0 && data.files.length === 0) {{
+                            list.innerHTML = '<p class="text-center text-gray-600 py-6 text-xs">Empty folder</p>';
+                        }}
+                    }})
+                    .catch(function(err) {{
+                        console.error('Browse error', err);
+                        var list = document.getElementById('ds-browser-list');
+                        if (list) list.innerHTML = '<p class="text-center text-red-400 py-6 text-xs px-2">Cannot connect to server.<br>Run: <code class=\"text-yellow-400\">python apps/dataset_server.py</code><br>then open <b>http://localhost:5000</b></p>';
+                        var pathEl = document.getElementById('ds-current-path');
+                        if (pathEl) pathEl.textContent = 'Server not running';
+                    }});
+            }}
+
+            window.dsBrowseUp = function() {{
+                if (ds.currentBrowsePath) {{
+                    var parts = ds.currentBrowsePath.replace(/\\\\/g, '/').split('/');
+                    parts.pop();
+                    dsBrowse(parts.join('/') || ds.currentBrowsePath);
+                }}
+            }};
+
+            // ── Load CSV ───────────────────────────────────────────────────
+            window.dsLoadCSV = function() {{
+                var path = (document.getElementById('ds-selected-path') || {{}}).value;
+                if (!path) {{ alert('Select a CSV file first.'); return; }}
+                fetch('/datasets/load?path=' + encodeURIComponent(path))
+                    .then(function(r) {{ return r.json(); }})
+                    .then(function(data) {{
+                        if (data.error) {{ alert('Error: ' + data.error); return; }}
+                        ds.columns = data.columns;
+                        ds.rows = data.rows;
+                        ds.originalRows = JSON.parse(JSON.stringify(data.rows));
+                        ds.dirty = false;
+                        dsRenderTable();
+                        hideEl('ds-save-bar');
+                    }})
+                    .catch(function(err) {{ alert('Load failed: ' + err); }});
+            }};
+
+            // ── Render Table ───────────────────────────────────────────────
+            function dsRenderTable() {{
+                var thead = document.getElementById('ds-thead');
+                var tbody = document.getElementById('ds-tbody');
+                var empty = document.getElementById('ds-table-empty');
+                var counter = document.getElementById('ds-row-count');
+                if (!thead || !tbody) return;
+
+                if (!ds.columns.length) {{
+                    thead.innerHTML = '';
+                    tbody.innerHTML = '';
+                    if (empty) empty.style.display = '';
+                    if (counter) counter.textContent = '';
+                    return;
+                }}
+
+                if (empty) empty.style.display = 'none';
+                if (counter) counter.textContent = '(' + ds.rows.length + ' rows)';
+
+                // Header
+                var hHtml = '<tr>';
+                ds.columns.forEach(function(col) {{
+                    hHtml += '<th class="px-3 py-2 font-semibold text-gray-500 whitespace-nowrap border-b border-gray-800">' + esc(col) + '</th>';
+                }});
+                hHtml += '<th class="px-3 py-2 font-semibold text-gray-500 border-b border-gray-800 text-right">Actions</th></tr>';
+                thead.innerHTML = hHtml;
+
+                // Body
+                var bHtml = '';
+                ds.rows.forEach(function(row, idx) {{
+                    bHtml += '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">';
+                    ds.columns.forEach(function(col) {{
+                        var val = String(row[col] || '');
+                        var display = val.length > 80 ? val.substring(0, 80) + '…' : val;
+                        bHtml += '<td class="px-3 py-2 align-top max-w-xs" title="' + esc(val) + '">' + esc(display) + '</td>';
+                    }});
+                    bHtml += '<td class="px-3 py-2 text-right whitespace-nowrap align-top">' +
+                        '<button onclick="dsEditRow(' + idx + ')" class="text-indigo-400 hover:text-indigo-300 text-xs mr-3 transition-colors">Edit</button>' +
+                        '<button onclick="dsDeleteRow(' + idx + ')" class="text-red-500 hover:text-red-400 text-xs transition-colors">Delete</button>' +
+                        '</td></tr>';
+                }});
+                tbody.innerHTML = bHtml;
+            }}
+
+            // ── Edit Row Modal ─────────────────────────────────────────────
+            window.dsEditRow = function(idx) {{
+                ds.modalRowIdx = idx;
+                var row = ds.rows[idx];
+                var title = document.getElementById('ds-modal-title');
+                if (title) title.textContent = 'Edit Row ' + (idx + 1);
+                dsOpenModal(row);
+            }};
+
+            window.dsAddRow = function() {{
+                if (!ds.columns.length) {{ alert('Load a CSV first.'); return; }}
+                ds.modalRowIdx = null;
+                var emptyRow = {{}};
+                ds.columns.forEach(function(c) {{ emptyRow[c] = ''; }});
+                var title = document.getElementById('ds-modal-title');
+                if (title) title.textContent = 'Add New Row';
+                dsOpenModal(emptyRow);
+            }};
+
+            function dsOpenModal(row) {{
+                var fields = document.getElementById('ds-modal-fields');
+                if (!fields) return;
+                var html = '';
+                ds.columns.forEach(function(col) {{
+                    var val = row[col] || '';
+                    var isLong = col === 'context' || col === 'retrieval_context' || col === 'expected_answer';
+                    html += '<div><label class="block text-xs font-semibold text-gray-400 mb-1">' + esc(col) + '</label>';
+                    if (isLong) {{
+                        html += '<textarea data-col="' + esc(col) + '" rows="4" ' +
+                            'class="w-full bg-[#050506] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 outline-none focus:border-indigo-500 resize-y">' +
+                            esc(val) + '</textarea>';
+                    }} else {{
+                        html += '<input type="text" data-col="' + esc(col) + '" value="' + esc(val) + '" ' +
+                            'class="w-full bg-[#050506] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 outline-none focus:border-indigo-500"/>';
+                    }}
+                    html += '</div>';
+                }});
+                fields.innerHTML = html;
+                showEl('ds-row-modal');
+            }}
+
+            window.dsCloseModal = function() {{
+                hideEl('ds-row-modal');
+            }};
+
+            window.dsModalSave = function() {{
+                var fields = document.getElementById('ds-modal-fields');
+                if (!fields) return;
+                var inputs = fields.querySelectorAll('[data-col]');
+                var newRow = {{}};
+                inputs.forEach(function(el) {{
+                    newRow[el.getAttribute('data-col')] = el.value;
+                }});
+                if (ds.modalRowIdx === null) {{
+                    ds.rows.push(newRow);
+                }} else {{
+                    ds.rows[ds.modalRowIdx] = newRow;
+                }}
+                ds.dirty = true;
+                dsRenderTable();
+                showEl('ds-save-bar');
+                dsCloseModal();
+            }};
+
+            // ── Delete Row ─────────────────────────────────────────────────
+            window.dsDeleteRow = function(idx) {{
+                if (!confirm('Delete row ' + (idx + 1) + '?')) return;
+                ds.rows.splice(idx, 1);
+                ds.dirty = true;
+                dsRenderTable();
+                showEl('ds-save-bar');
+            }};
+
+            // ── Save / Discard ─────────────────────────────────────────────
+            window.dsSaveCSV = function() {{
+                var path = ds.selectedFilePath;
+                if (!path) {{ alert('No file selected.'); return; }}
+                fetch('/datasets/save', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ path: path, columns: ds.columns, rows: ds.rows }})
+                }})
+                .then(function(r) {{ return r.json(); }})
+                .then(function(data) {{
+                    if (data.error) {{ alert('Save failed: ' + data.error); return; }}
+                    ds.originalRows = JSON.parse(JSON.stringify(ds.rows));
+                    ds.dirty = false;
+                    hideEl('ds-save-bar');
+                    alert('Saved ' + data.rows_saved + ' rows.');
+                }})
+                .catch(function(err) {{ alert('Save error: ' + err); }});
+            }};
+
+            window.dsDiscardChanges = function() {{
+                if (!confirm('Discard all unsaved changes?')) return;
+                ds.rows = JSON.parse(JSON.stringify(ds.originalRows));
+                ds.dirty = false;
+                dsRenderTable();
+                hideEl('ds-save-bar');
+            }};
+
+            // ── Metrics ────────────────────────────────────────────────────
+            function dsLoadMetrics() {{
+                fetch('/metrics')
+                    .then(function(r) {{ return r.json(); }})
+                    .then(function(data) {{
+                        ds.allMetrics = data;
+                        dsRenderMetrics();
+                    }})
+                    .catch(function() {{
+                        ds.allMetrics = {{
+                            llm: ['fluency','relevance','correctness','hallucination'],
+                            rag: ['answer_relevancy','faithfulness','contextual_precision','contextual_recall','contextual_relevancy']
+                        }};
+                        dsRenderMetrics();
+                    }});
+            }}
+
+            function dsRenderMetrics() {{
+                var container = document.getElementById('ds-metrics-checkboxes');
+                if (!container) return;
+                var keys = ds.allMetrics[ds.evalType] || [];
+                var labelMap = ds.evalType === 'llm' ? LLM_METRIC_LABELS : RAG_METRIC_LABELS;
+                container.innerHTML = keys.map(function(k) {{
+                    return '<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-300 hover:text-white">' +
+                        '<input type="checkbox" value="' + esc(k) + '" checked ' +
+                        'class="accent-indigo-500 w-3 h-3"/>' +
+                        (labelMap[k] || k) + '</label>';
+                }}).join('');
+            }}
+
+            window.dsSelectType = function(type) {{
+                ds.evalType = type;
+                var base = 'px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ';
+                var inactive = base + 'border-gray-700 text-gray-400 hover:text-white';
+                var active   = base + 'border-indigo-500 bg-indigo-600 text-white';
+                var btnLlm = document.getElementById('ds-type-llm');
+                var btnRag = document.getElementById('ds-type-rag');
+                if (btnLlm) btnLlm.className = (type === 'llm') ? active : inactive;
+                if (btnRag) btnRag.className = (type === 'rag') ? active : inactive;
+                if (ds.allMetrics[type]) dsRenderMetrics();
+            }};
+
+            // ── Run Evaluation ─────────────────────────────────────────────
+            window.dsRunEvaluation = function() {{
+                var path = ds.selectedFilePath;
+                if (!path) {{ alert('Load a CSV file first.'); return; }}
+
+                var checkboxes = document.querySelectorAll('#ds-metrics-checkboxes input[type=checkbox]:checked');
+                var metrics = [];
+                checkboxes.forEach(function(cb) {{ metrics.push(cb.value); }});
+                if (!metrics.length) {{ alert('Select at least one metric.'); return; }}
+
+                var log = document.getElementById('ds-run-log');
+                if (log) {{ log.textContent = ''; showEl('ds-run-log'); }}
+                showEl('ds-run-spinner');
+                showEl('ds-stop-btn');
+                var runBtn = document.getElementById('ds-run-btn');
+                if (runBtn) runBtn.disabled = true;
+
+                fetch('/run', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ path: path, type: ds.evalType, metrics: metrics }})
+                }})
+                .then(function(r) {{ return r.json(); }})
+                .then(function(data) {{
+                    if (data.error) {{
+                        hideEl('ds-run-spinner');
+                        hideEl('ds-stop-btn');
+                        if (runBtn) runBtn.disabled = false;
+                        alert('Run failed: ' + data.error);
+                        return;
+                    }}
+                    dsPollRunStatus();
+                }})
+                .catch(function(err) {{
+                    hideEl('ds-run-spinner');
+                    hideEl('ds-stop-btn');
+                    if (runBtn) runBtn.disabled = false;
+                    alert('Error: ' + err);
+                }});
+            }};
+
+            // ── Stop Evaluation ────────────────────────────────────────────
+            window.dsStopEvaluation = function() {{
+                var stopBtn = document.getElementById('ds-stop-btn');
+                if (stopBtn) {{ stopBtn.disabled = true; stopBtn.textContent = 'Stopping...'; }}
+                fetch('/run/stop', {{ method: 'POST' }})
+                    .then(function(r) {{ return r.json(); }})
+                    .then(function(data) {{
+                        if (data.error) {{
+                            alert(data.error);
+                            if (stopBtn) {{ stopBtn.disabled = false; stopBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><rect x="9" y="9" width="6" height="6" fill="currentColor" rx="1"/></svg> Stop'; }}
+                        }}
+                    }})
+                    .catch(function(err) {{ alert('Stop failed: ' + err); }});
+            }};
+
+            function dsPollRunStatus() {{
+                if (ds.runPollInterval) clearInterval(ds.runPollInterval);
+                ds.runPollInterval = setInterval(function() {{
+                    fetch('/run/status')
+                        .then(function(r) {{ return r.json(); }})
+                        .then(function(data) {{
+                            var log = document.getElementById('ds-run-log');
+                            if (log) log.textContent = data.log || '';
+                            if (!data.running) {{
+                                clearInterval(ds.runPollInterval);
+                                ds.runPollInterval = null;
+                                hideEl('ds-run-spinner');
+                                hideEl('ds-stop-btn');
+                                var stopBtn = document.getElementById('ds-stop-btn');
+                                if (stopBtn) {{ stopBtn.disabled = false; }}
+                                var runBtn = document.getElementById('ds-run-btn');
+                                if (runBtn) runBtn.disabled = false;
+                                if (data.stopped) {{
+                                    if (log) log.textContent += '\\n[STOPPED] Evaluation was cancelled.';
+                                }} else if (data.error) {{
+                                    if (log) log.textContent += '\\n[ERROR] ' + data.error;
+                                }} else {{
+                                    if (log) log.textContent += '\\n[DONE] Refresh the page to see updated results.';
+                                }}
+                            }}
+                        }})
+                        .catch(function() {{ clearInterval(ds.runPollInterval); }});
+                }}, 2000);
+            }}
+
+        }})();
+        </script>
         <div id="view-detail" class="hidden p-8">
 
             <!-- Back button -->
@@ -1380,6 +2010,8 @@ def create_dashboard(json_filepath, html_filepath):
                         interaction: {{ intersect: false, mode: 'index' }},
                         scales: {{
                             x: {{
+                                type: 'category',
+                                offset: true,
                                 grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
                                 ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
                             }},
@@ -2744,6 +3376,15 @@ def create_dashboard(json_filepath, html_filepath):
             document.getElementById('view-runs').classList.remove('hidden');
             document.getElementById('view-detail').classList.add('hidden');
             document.getElementById('view-compare').classList.add('hidden');
+            var vd = document.getElementById('view-datasets');
+            if (vd) vd.classList.add('hidden');
+            // Stop dataset polling when leaving the Datasets view
+            if (window._dsStopPolling) window._dsStopPolling();
+            // Restore nav active states
+            var navEval = document.getElementById('nav-evaluation');
+            var navDs   = document.getElementById('nav-datasets');
+            if (navEval) navEval.classList.add('active');
+            if (navDs)   navDs.classList.remove('active');
         }}
 
         function applyDashboardFilters(resetPagination) {{
