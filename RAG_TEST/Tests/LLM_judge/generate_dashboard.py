@@ -10,6 +10,38 @@ from statistics import mean, stdev
 
 # ── Markdown → HTML helper ────────────────────────────────────────────────────
 
+def _strip_markdown_plain(text: str) -> str:
+    """Strip markdown syntax from text, returning clean plain text."""
+    if not text:
+        return ""
+    lines = text.splitlines()
+    cleaned = []
+    prev_blank = False
+    for line in lines:
+        s = line.strip()
+        s = re.sub(r'^#{1,6}\s*', '', s)
+        s = re.sub(r'^[-*+]\s+', '', s)
+        s = re.sub(r'^\d+[.)]\s+', '', s)
+        s = re.sub(r'^>\s+', '', s)
+        s = re.sub(r'\*\*(.+?)\*\*', r'\1', s)
+        s = re.sub(r'__(.+?)__', r'\1', s)
+        s = re.sub(r'\*(.+?)\*', r'\1', s)
+        s = re.sub(r'_(.+?)_', r'\1', s)
+        s = re.sub(r'`([^`]+)`', r'\1', s)
+        s = re.sub(r'^[-=_]{3,}\s*$', '', s)
+        s = re.sub(r'!\[.*?\]\(.*?\)', '', s)
+        s = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', s)
+        s = s.strip()
+        if not s:
+            if prev_blank:
+                continue
+            prev_blank = True
+        else:
+            prev_blank = False
+        cleaned.append(s)
+    return '\n'.join(cleaned).strip()
+
+
 def _render_summary_html(text: str) -> str:
     """Convert the GPT markdown analysis report into clean, professional HTML."""
     if not text:
@@ -131,7 +163,9 @@ def _format_date_ddmmyyyy(value: str) -> str:
     dt = _parse_datetime_value(value)
     if dt is None:
         return (value or "").strip()
-    return dt.strftime("%d-%m-%Y")
+    if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+        return dt.strftime("%d-%m-%Y")
+    return dt.strftime("%d-%m-%Y %H:%M")
 
 
 def _norm_metric_key(k) -> str:
@@ -377,7 +411,7 @@ def _build_per_run_summaries(source_files: list) -> list:
         analysis_summary_text = ""
         if isinstance(raw, dict):
             evaluator_type = (raw.get("evaluator_type") or "").strip()
-            analysis_summary_text = raw.get("analysis_summary") or ""
+            analysis_summary_text = _strip_markdown_plain(raw.get("analysis_summary") or "")
 
         # Discover metrics for this run
         run_metric_norm_set = set()
@@ -705,7 +739,7 @@ def create_dashboard(json_filepath, html_filepath):
         if len(r["metric_names"]) > 3:
             metric_chips += f'<span class="text-gray-500 text-[10px]">+{len(r["metric_names"]) - 3} more</span>'
 
-        ts_display = _format_date_ddmmyyyy(r["timestamp"]) if r["timestamp"] else r["label"]
+        ts_display = r["label"]  # label already contains date + time (e.g. "08-03-2026 11:03")
         fname_short = r["filename"][:32] + ("..." if len(r["filename"]) > 32 else "")
 
         result_cls = (
@@ -716,7 +750,9 @@ def create_dashboard(json_filepath, html_filepath):
 
         runs_table_rows_html += (
             f'<tr class="run-row table-hover-row border-b border-gray-700/70 hover:bg-gray-800/30 transition-colors cursor-pointer"'
-            f' data-run-idx="{i}" data-evaluator="{_safe(r["evaluator_type"])}" onclick="showDetail({i})">'
+            f' data-run-idx="{i}" data-evaluator="{_safe(r["evaluator_type"])}"'
+            f' onclick="previewRunRow(event, {i})"'
+            f' title="Left click previews this run.">'
             f'<td class="py-3 px-4 text-gray-400 text-sm whitespace-nowrap">{_safe(ts_display)}</td>'
             f'<td class="py-3 px-4">'
             f'<span class="font-mono text-violet-400 text-xs bg-violet-500/10 px-2 py-1 rounded border border-violet-500/20"'
@@ -727,6 +763,9 @@ def create_dashboard(json_filepath, html_filepath):
             f'<td class="py-3 px-4 whitespace-nowrap">'
             f'<span class="px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border {result_cls}">'
             f'{_safe(result_label)}</span></td>'
+            f'<td class="py-3 px-4 text-right">'
+            f'<button type="button" onclick="event.stopPropagation(); showDetail({i})"'
+            f' class="run-view-btn px-3 py-1.5 rounded border border-violet-500/30 bg-violet-500/10 text-violet-300 text-[11px] font-semibold hover:bg-violet-500/20 hover:text-white">View</button></td>'
             f'</tr>'
         )
 
@@ -755,7 +794,7 @@ def create_dashboard(json_filepath, html_filepath):
     metric_color_map_json = json.dumps(metric_color)
 
     # ── HTML template ─────────────────────────────────────────────────────────
-    html_template = f"""<!DOCTYPE html>
+    html_template = rf"""<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -855,18 +894,16 @@ def create_dashboard(json_filepath, html_filepath):
             <div class="flex items-center justify-between mb-6 no-print">
                 <div>
                     <h1 class="text-white font-bold text-xl tracking-tight">Test Runs</h1>
-                    <p class="text-gray-500 text-xs mt-1">Using evaluation data from <span id="runs-visible-caption-count">{total_runs}</span> displayed test run{"s" if total_runs != 1 else ""} · click a row to inspect</p>
+                    <p class="text-gray-500 text-xs mt-1">Using evaluation data from <span id="runs-visible-caption-count">{total_runs}</span> displayed test run{"s" if total_runs != 1 else ""} · left click previews question scores</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2">
                         <span class="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Evaluator</span>
                         <select id="evaluator-filter-select" class="bg-[#101117] border border-gray-700 rounded px-3 py-2 text-xs text-gray-200 min-w-[130px]"></select>
                     </div>
-                    <button onclick="window.print()"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors border border-violet-500/50 cursor-pointer">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                        Export PDF
-                    </button>
+                </div>
+                <div id="run-interaction-panel" class="mt-3 flex flex-wrap items-center gap-2">
+                    <span id="run-preview-chip" class="hidden px-2.5 py-1 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-[11px]"></span>
                 </div>
             </div>
 
@@ -945,10 +982,10 @@ def create_dashboard(json_filepath, html_filepath):
             <div class="glass-panel p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-gray-200 font-semibold text-sm">Test Run Performance</h3>
-                        <p class="text-gray-500 text-xs mt-0.5">Average metric score per run · one point per evaluation file · error bar = 1 SD</p>
+                        <h3 id="runs-chart-title" class="text-gray-200 font-semibold text-sm">Test Run Performance</h3>
+                        <p id="runs-chart-subtitle" class="text-gray-500 text-xs mt-0.5">Average metric score per run · one point per evaluation file · error bar = 1 SD</p>
                     </div>
-                    <span class="px-2.5 py-1 rounded bg-[#2e2348] text-[#a78bfa] text-[10px] uppercase font-bold tracking-wider border border-[#4c3a7a]">All Metrics</span>
+                    <span id="runs-chart-badge" class="px-2.5 py-1 rounded bg-[#2e2348] text-[#a78bfa] text-[10px] uppercase font-bold tracking-wider border border-[#4c3a7a]">All Metrics</span>
                 </div>
                 <div class="h-56 w-full">
                     <canvas id="runsChart"></canvas>
@@ -991,6 +1028,7 @@ def create_dashboard(json_filepath, html_filepath):
                                 <th class="py-3 px-4 font-semibold w-28">Evaluator</th>
                                 <th class="py-3 px-4 font-semibold">Metric Scores</th>
                                 <th class="py-3 px-4 font-semibold w-32">Test Result</th>
+                                <th class="py-3 px-4 font-semibold w-24 text-right">View</th>
                             </tr>
                         </thead>
                         <tbody id="runs-table-body">
@@ -1902,6 +1940,7 @@ def create_dashboard(json_filepath, html_filepath):
         const dashboardState = {{
             selectedEvaluator: 'All',
             selectedRunIdx: -1,
+            previewRunIdx: -1,
             timeRangePreset: 'today',
             customStartDate: '',
             customEndDate: '',
@@ -1917,12 +1956,22 @@ def create_dashboard(json_filepath, html_filepath):
                 .map(function(line) {{
                     let s = line.trim();
                     s = s.replace(/^#{{1,6}}\\s*/, '');
-                    s = s.replace(/^[-*]\\s+/, '');
+                    s = s.replace(/^[-*+]\\s+/, '');
+                    s = s.replace(/^\\d+[.)]\\s+/, '');
                     s = s.replace(/^>\\s+/, '');
                     s = s.replace(/\\*\\*(.*?)\\*\\*/g, '$1');
                     s = s.replace(/__(.*?)__/g, '$1');
+                    s = s.replace(/\\*(.*?)\\*/g, '$1');
+                    s = s.replace(/_(.*?)_/g, '$1');
                     s = s.replace(/`([^`]+)`/g, '$1');
+                    s = s.replace(/^[-=_]{3,}\\s*$/, '');
+                    s = s.replace(/\\[(.*?)\\]\\((.*?)\\)/g, '$1');
+                    s = s.replace(/!\\[(.*?)\\]\\((.*?)\\)/g, '$1');
                     return s;
+                }})
+                .filter(function(line, idx, arr) {{
+                    if (!line && idx > 0 && !arr[idx - 1]) return false;
+                    return true;
                 }})
                 .join(String.fromCharCode(10))
                 .trim();
@@ -1930,6 +1979,7 @@ def create_dashboard(json_filepath, html_filepath):
 
         // ── Runs list chart ───────────────────────────────────────────────────
         let runsChart = null;
+        let runsChartMode = '';
         const runsErrorBarsPlugin = {{
             id: 'runsErrorBars',
             afterDatasetsDraw(chart) {{
@@ -1991,61 +2041,143 @@ def create_dashboard(json_filepath, html_filepath):
                 ctx.restore();
             }}
         }};
-        try {{
+        function getRunsChartTitleElements() {{
+            return {{
+                title: document.getElementById('runs-chart-title'),
+                subtitle: document.getElementById('runs-chart-subtitle'),
+                badge: document.getElementById('runs-chart-badge'),
+            }};
+        }}
+
+        function setRunsChartHeader(mode, run) {{
+            const els = getRunsChartTitleElements();
+            if (!els.title || !els.subtitle || !els.badge) return;
+            if (mode === 'preview' && run) {{
+                els.title.textContent = 'Question Scores';
+                els.subtitle.textContent = 'Questions on X axis · combined score and metric lines on Y axis';
+                els.badge.textContent = 'Scores';
+                return;
+            }}
+            els.title.textContent = 'Test Run Performance';
+            els.subtitle.textContent = 'Average metric score per run · one point per evaluation file · error bar = 1 SD';
+            els.badge.textContent = 'All Metrics';
+        }}
+
+        function createRunsChart(mode) {{
             const runsChartEl = document.getElementById('runsChart');
-            if (runsChartEl && typeof Chart !== 'undefined') {{
-                const runsCtx = runsChartEl.getContext('2d');
-                runsChart = new Chart(runsCtx, {{
-                    type: 'line',
-                    data: {{
-                        labels: {json.dumps(run_labels)},
-                        datasets: [
-                            {runs_chart_datasets_str}
-                        ]
-                    }},
-                    plugins: [runsErrorBarsPlugin],
-                    options: {{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {{ intersect: false, mode: 'index' }},
-                        scales: {{
-                            x: {{
-                                type: 'category',
-                                offset: true,
-                                grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
-                                ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
-                            }},
-                            y: {{
-                                min: 0.0, max: 1.05,
-                                grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
-                                ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
-                            }}
+            if (!runsChartEl || typeof Chart === 'undefined') return null;
+            const chartType = 'line';
+            const chartPlugins = mode === 'preview' ? [] : [runsErrorBarsPlugin];
+            const chartOptions = mode === 'preview'
+                ? {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {{ intersect: false, mode: 'index' }},
+                    scales: {{
+                        x: {{
+                            type: 'category',
+                            offset: true,
+                            grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                            ticks: {{ color: '#9ca3af', font: {{ size: 11 }} }}
                         }},
-                        plugins: {{
-                            legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }},
-                            tooltip: {{
-                                backgroundColor: '#1f2028', borderColor: '#2e3040', borderWidth: 1,
-                                titleColor: '#e5e7eb', bodyColor: '#9ca3af', padding: 10,
-                                callbacks: {{
-                                    label: function(context) {{
-                                        const ds = context.dataset || {{}};
-                                        const metricName = String(ds.label || '').split('  ')[0];
-                                        const mean = context.parsed && context.parsed.y;
-                                        if (mean == null || !Number.isFinite(Number(mean))) {{
-                                            return metricName + ': N/A';
-                                        }}
-                                        const sdSeries = Array.isArray(ds.errorBarData) ? ds.errorBarData : [];
-                                        const sdRaw = sdSeries[context.dataIndex];
-                                        if (sdRaw == null || !Number.isFinite(Number(sdRaw))) {{
-                                            return metricName + ': ' + Number(mean).toFixed(3);
-                                        }}
-                                        return metricName + ': ' + Number(mean).toFixed(3) + ' ± ' + Number(sdRaw).toFixed(3) + ' (1 SD)';
+                        y: {{
+                            min: 0.0, max: 1.05,
+                            grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                            ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                        }}
+                    }},
+                    plugins: {{
+                        legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }},
+                        tooltip: {{
+                            backgroundColor: '#1f2028', borderColor: '#2e3040', borderWidth: 1,
+                            titleColor: '#e5e7eb', bodyColor: '#9ca3af', padding: 10,
+                            callbacks: {{
+                                title: function(context) {{
+                                    if (!Array.isArray(context) || !context.length) return '';
+                                    const ds = context[0].dataset || {{}};
+                                    const questionTexts = Array.isArray(ds.questionTexts) ? ds.questionTexts : [];
+                                    return questionTexts[context[0].dataIndex] || context[0].label || '';
+                                }},
+                                label: function(context) {{
+                                    const ds = context.dataset || {{}};
+                                    const raw = Array.isArray(ds.rawScores) ? ds.rawScores[context.dataIndex] : null;
+                                    if (raw == null || !Number.isFinite(Number(raw))) {{
+                                        return String(ds.label || 'Score') + ': N/A';
                                     }}
+                                    return String(ds.label || 'Score') + ': ' + Number(raw).toFixed(3);
+                                }},
+                                afterLabel: function(context) {{
+                                    const ds = context.dataset || {{}};
+                                    const statuses = Array.isArray(ds.caseStatuses) ? ds.caseStatuses : [];
+                                    return 'Status: ' + (statuses[context.dataIndex] || 'Unknown');
                                 }}
                             }}
                         }}
                     }}
-                }});
+                }}
+                : {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {{ intersect: false, mode: 'index' }},
+                    scales: {{
+                        x: {{
+                            type: 'category',
+                            offset: true,
+                            grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                            ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                        }},
+                        y: {{
+                            min: 0.0, max: 1.05,
+                            grid: {{ color: 'rgba(31,41,55,0.4)', drawBorder: false }},
+                            ticks: {{ color: '#6b7280', font: {{ size: 11 }} }}
+                        }}
+                    }},
+                    plugins: {{
+                        legend: {{ position: 'top', align: 'end', labels: {{ color: '#9ca3af', boxWidth: 10, usePointStyle: true, font: {{ size: 11 }} }} }},
+                        tooltip: {{
+                            backgroundColor: '#1f2028', borderColor: '#2e3040', borderWidth: 1,
+                            titleColor: '#e5e7eb', bodyColor: '#9ca3af', padding: 10,
+                            callbacks: {{
+                                label: function(context) {{
+                                    const ds = context.dataset || {{}};
+                                    const metricName = String(ds.label || '').split('  ')[0];
+                                    const mean = context.parsed && context.parsed.y;
+                                    if (mean == null || !Number.isFinite(Number(mean))) {{
+                                        return metricName + ': N/A';
+                                    }}
+                                    const sdSeries = Array.isArray(ds.errorBarData) ? ds.errorBarData : [];
+                                    const sdRaw = sdSeries[context.dataIndex];
+                                    if (sdRaw == null || !Number.isFinite(Number(sdRaw))) {{
+                                        return metricName + ': ' + Number(mean).toFixed(3);
+                                    }}
+                                    return metricName + ': ' + Number(mean).toFixed(3) + ' ± ' + Number(sdRaw).toFixed(3) + ' (1 SD)';
+                                }}
+                            }}
+                        }}
+                    }}
+                }};
+
+            if (runsChart && runsChartMode === mode) return runsChart;
+            if (runsChart) {{
+                runsChart.destroy();
+                runsChart = null;
+            }}
+
+            const runsCtx = runsChartEl.getContext('2d');
+            runsChartMode = mode;
+            runsChart = new Chart(runsCtx, {{
+                type: chartType,
+                data: {{ labels: [], datasets: [] }},
+                plugins: chartPlugins,
+                options: chartOptions,
+            }});
+            return runsChart;
+        }}
+
+        try {{
+            const runsChartEl = document.getElementById('runsChart');
+            if (runsChartEl && typeof Chart !== 'undefined') {{
+                createRunsChart('default');
             }} else if (runsChartEl && typeof Chart === 'undefined') {{
                 console.warn('Chart.js failed to load (check CDN/network). Open via http:// for best results.');
             }}
@@ -2083,7 +2215,91 @@ def create_dashboard(json_filepath, html_filepath):
         }}
 
         function renderRunsChartForEntries(filteredEntries) {{
-            if (!runsChart) return;
+            const previewRun = getPreviewRun();
+            if (previewRun) {{
+                setRunsChartHeader('preview', previewRun);
+                const chart = createRunsChart('preview');
+                if (!chart) return;
+                const cases = getRunTestCases(previewRun);
+                const labels = cases.map(function(caseItem, idx) {{
+                    return truncateText(caseItem.question || caseItem.name || ('Question ' + String(idx + 1)), 72);
+                }});
+                const questionTexts = cases.map(function(caseItem, idx) {{
+                    return caseItem.question || caseItem.name || ('Question ' + String(idx + 1));
+                }});
+                const scores = cases.map(function(caseItem) {{
+                    return getCasePreviewScore(caseItem);
+                }});
+                const statuses = cases.map(function(caseItem) {{
+                    return String(caseItem.status || 'Unknown');
+                }});
+                const combinedColors = statuses.map(function(status) {{
+                    return normalizeStatusKind(status) === 'fail' ? 'rgba(244,63,94,0.75)' : 'rgba(16,185,129,0.75)';
+                }});
+                const combinedBorderColors = statuses.map(function(status) {{
+                    return normalizeStatusKind(status) === 'fail' ? '#f43f5e' : '#10b981';
+                }});
+                const metricNames = Array.from(new Set(cases.flatMap(function(caseItem) {{
+                    return Object.keys(caseItem.evaluation_metrics || {{}});
+                }}))).sort();
+                const datasets = [{{
+                    label: 'Combined score',
+                    data: scores,
+                    rawScores: scores,
+                    questionTexts: questionTexts,
+                    caseStatuses: statuses,
+                    backgroundColor: 'rgba(255,255,255,0.18)',
+                    borderColor: '#f8fafc',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: combinedBorderColors,
+                    pointBorderColor: combinedBorderColors,
+                    tension: 0.25,
+                    fill: false,
+                    spanGaps: true,
+                }}];
+                metricNames.forEach(function(metricName, metricIdx) {{
+                    const color = getMetricColor(metricName, metricIdx);
+                    const metricScores = cases.map(function(caseItem) {{
+                        return getCaseMetricScore(caseItem, metricName);
+                    }});
+                    datasets.push({{
+                        label: metricName,
+                        data: metricScores,
+                        rawScores: metricScores,
+                        questionTexts: questionTexts,
+                        caseStatuses: statuses,
+                        backgroundColor: color + '22',
+                        borderColor: color,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: color,
+                        pointBorderColor: color,
+                        tension: 0.25,
+                        fill: false,
+                        spanGaps: true,
+                    }});
+                }});
+                const allPreviewValues = datasets.flatMap(function(ds) {{
+                    return Array.isArray(ds.rawScores) ? ds.rawScores : [];
+                }});
+                const scoreMax = Math.max(1.05, allPreviewValues.reduce(function(acc, val) {{
+                    return (val != null && Number.isFinite(Number(val))) ? Math.max(acc, Number(val) + 0.05) : acc;
+                }}, 1.05));
+                if (chart.options && chart.options.scales && chart.options.scales.x) {{
+                    chart.options.scales.y.max = scoreMax;
+                }}
+                chart.data.labels = labels;
+                chart.data.datasets = datasets;
+                chart.update('none');
+                return;
+            }}
+
+            setRunsChartHeader('default', null);
+            const chart = createRunsChart('default');
+            if (!chart) return;
             const runs = filteredEntries.map(function(item) {{ return item.run; }});
             const labels = runs.map(function(run) {{ return getRunDateDisplay(run); }});
             const metricSet = new Set();
@@ -2116,12 +2332,13 @@ def create_dashboard(json_filepath, html_filepath):
                 }};
             }});
 
-            runsChart.data.labels = labels;
-            runsChart.data.datasets = datasets;
-            runsChart.update('none');
+            chart.data.labels = labels;
+            chart.data.datasets = datasets;
+            chart.update('none');
         }}
 
         function updateRunsChartHighlightRange(start, endExclusive) {{
+            if (runsChartMode !== 'default') return;
             if (!runsChart || !runsChart.data || !Array.isArray(runsChart.data.labels)) return;
             const labels = runsChart.data.labels;
             const total = labels.length;
@@ -2252,6 +2469,13 @@ def create_dashboard(json_filepath, html_filepath):
             return pad2(dt.getDate()) + '-' + pad2(dt.getMonth() + 1) + '-' + String(dt.getFullYear());
         }}
 
+        function formatDateTimeDdMmYyyy(dateObj) {{
+            const dt = new Date(dateObj);
+            if (!Number.isFinite(dt.getTime())) return '';
+            return pad2(dt.getDate()) + '-' + pad2(dt.getMonth() + 1) + '-' + String(dt.getFullYear())
+                + ' ' + pad2(dt.getHours()) + ':' + pad2(dt.getMinutes());
+        }}
+
         function normalizeTime24h(value) {{
             const raw = String(value || '').trim();
             if (!raw) return '';
@@ -2290,11 +2514,17 @@ def create_dashboard(json_filepath, html_filepath):
             if (!raw) return '';
             const fromDateCtor = new Date(raw);
             if (Number.isFinite(fromDateCtor.getTime())) {{
-                return formatDateDdMmYyyy(fromDateCtor);
+                return formatDateTimeDdMmYyyy(fromDateCtor);
             }}
-            const isoMatch = raw.match(/^(\d{{4}})-(\d{{2}})-(\d{{2}})/);
+            const isoMatch = raw.match(/^(\d{{4}})-(\d{{2}})-(\d{{2}})(?:[T ](\d{{2}}):(\d{{2}}))?/);
             if (isoMatch) {{
-                return isoMatch[3] + '-' + isoMatch[2] + '-' + isoMatch[1];
+                const datePart = isoMatch[3] + '-' + isoMatch[2] + '-' + isoMatch[1];
+                const timePart = isoMatch[4] ? ' ' + isoMatch[4] + ':' + isoMatch[5] : '';
+                return datePart + timePart;
+            }}
+            const dmyTimeMatch = raw.match(/^(\d{{2}})-(\d{{2}})-(\d{{4}}) (\d{{2}}):(\d{{2}})/);
+            if (dmyTimeMatch) {{
+                return raw;
             }}
             const dmyMatch = raw.match(/^(\d{{2}})-(\d{{2}})-(\d{{4}})$/);
             if (dmyMatch) {{
@@ -2309,9 +2539,8 @@ def create_dashboard(json_filepath, html_filepath):
 
         function getRunDateDisplay(run) {{
             if (!run) return '';
-            const fromTs = formatDateValue(run.timestamp || '');
-            if (fromTs) return fromTs;
-            return formatDateValue(run.label || '');
+            if (run.label) return run.label;
+            return formatDateValue(run.timestamp || '');
         }}
 
         function normalizeRunRowDateCells() {{
@@ -2435,18 +2664,69 @@ def create_dashboard(json_filepath, html_filepath):
             return true;
         }}
 
-        function isRunVisible(run) {{
+        function isRunVisible(run, runIdx) {{
             return isRunVisibleByEvaluator(run) && isRunVisibleByTimeRange(run);
         }}
 
         function getFilteredRunEntries() {{
             const out = [];
             RUNS_DATA.forEach(function(run, idx) {{
-                if (isRunVisible(run)) {{
+                if (isRunVisible(run, idx)) {{
                     out.push({{ run: run, idx: idx }});
                 }}
             }});
             return out;
+        }}
+
+        function getPreviewRun() {{
+            const idx = Number(dashboardState.previewRunIdx);
+            if (!Number.isInteger(idx) || idx < 0) return null;
+            const run = RUNS_DATA[idx];
+            if (!run || !isRunVisible(run, idx)) return null;
+            return run;
+        }}
+
+        function getRunStatusLabel(idx) {{
+            const run = RUNS_DATA[idx];
+            if (!run) return '';
+            return '#' + String(idx + 1) + ' · ' + getRunDateDisplay(run) + ' · ' + run.filename;
+        }}
+
+        function getCasePreviewScore(caseItem) {{
+            if (!caseItem) return null;
+            const direct = caseItem.metric_score;
+            if (direct != null && Number.isFinite(Number(direct))) {{
+                return Number(direct);
+            }}
+            const metricValues = Object.values(caseItem.evaluation_metrics || {{}})
+                .map(function(metric) {{ return metric ? Number(metric.score) : NaN; }})
+                .filter(function(val) {{ return Number.isFinite(val); }});
+            if (metricValues.length) {{
+                const sum = metricValues.reduce(function(acc, val) {{ return acc + val; }}, 0);
+                return sum / metricValues.length;
+            }}
+            const statusKind = normalizeStatusKind(caseItem.status);
+            if (statusKind === 'pass') return 1;
+            if (statusKind === 'fail') return 0;
+            return null;
+        }}
+
+        function getCaseMetricScore(caseItem, metricName) {{
+            if (!caseItem || !metricName) return null;
+            const metric = (caseItem.evaluation_metrics || {{}})[metricName];
+            if (!metric) return null;
+            const score = metric.score;
+            return (score != null && Number.isFinite(Number(score))) ? Number(score) : null;
+        }}
+
+        function updateRunInteractionUI() {{
+            const previewChip = document.getElementById('run-preview-chip');
+
+            if (previewChip) {{
+                const previewRun = getPreviewRun();
+                previewChip.textContent = previewRun ? ('Previewing: ' + getRunStatusLabel(dashboardState.previewRunIdx)) : '';
+                previewChip.classList.toggle('hidden', !previewRun);
+            }}
         }}
 
         function setupEvaluatorFilterOptions() {{
@@ -2813,7 +3093,7 @@ def create_dashboard(json_filepath, html_filepath):
             const leftRun = RUNS_DATA[compareState.leftIdx];
             const rightRun = RUNS_DATA[compareState.rightIdx];
             if (!leftRun || !rightRun) return;
-            if (!isRunVisible(leftRun) || !isRunVisible(rightRun)) return;
+            if (!isRunVisible(leftRun, compareState.leftIdx) || !isRunVisible(rightRun, compareState.rightIdx)) return;
 
             const compareStats = renderCompareCases(leftRun, rightRun);
             const chip = document.getElementById('compare-summary-chip');
@@ -2828,7 +3108,7 @@ def create_dashboard(json_filepath, html_filepath):
             const leftRun = RUNS_DATA[leftIdx];
             const rightRun = RUNS_DATA[rightIdx];
             if (!leftRun || !rightRun) return;
-            if (!isRunVisible(leftRun) || !isRunVisible(rightRun)) return;
+            if (!isRunVisible(leftRun, leftIdx) || !isRunVisible(rightRun, rightIdx)) return;
 
             compareState.leftIdx = leftIdx;
             compareState.rightIdx = rightIdx;
@@ -2923,10 +3203,10 @@ def create_dashboard(json_filepath, html_filepath):
                 rightEl.innerHTML += '<option value="' + idx + '">' + escapeHtml(optionLabel) + '</option>';
             }});
 
-            if (!isRunVisible(RUNS_DATA[compareState.leftIdx])) {{
+            if (!isRunVisible(RUNS_DATA[compareState.leftIdx], compareState.leftIdx)) {{
                 compareState.leftIdx = filteredEntries.length ? filteredEntries[0].idx : 0;
             }}
-            if (!isRunVisible(RUNS_DATA[compareState.rightIdx]) || compareState.rightIdx === compareState.leftIdx) {{
+            if (!isRunVisible(RUNS_DATA[compareState.rightIdx], compareState.rightIdx) || compareState.rightIdx === compareState.leftIdx) {{
                 compareState.rightIdx = filteredEntries.length > 1 ? filteredEntries[1].idx : compareState.leftIdx;
             }}
 
@@ -2974,7 +3254,7 @@ def create_dashboard(json_filepath, html_filepath):
             const rows = Array.from(document.querySelectorAll('tr.run-row'));
             const filteredRows = rows.filter(function(row) {{
                 const runIdx = Number(row.getAttribute('data-run-idx'));
-                return isRunVisible(RUNS_DATA[runIdx]);
+                return isRunVisible(RUNS_DATA[runIdx], runIdx);
             }});
             const filteredEntries = getFilteredRunEntries();
             const total = filteredRows.length;
@@ -2990,6 +3270,13 @@ def create_dashboard(json_filepath, html_filepath):
             rows.forEach(function(row) {{ row.style.display = 'none'; }});
             filteredRows.forEach(function(row, idx) {{
                 row.style.display = (idx >= start && idx < end) ? '' : 'none';
+            }});
+            rows.forEach(function(row) {{
+                const runIdx = Number(row.getAttribute('data-run-idx'));
+                const isPreview = runIdx === dashboardState.previewRunIdx;
+                row.classList.toggle('bg-cyan-500/10', isPreview);
+                row.classList.toggle('ring-1', isPreview);
+                row.classList.toggle('ring-cyan-500/40', isPreview);
             }});
 
             const rangeText = document.getElementById('runs-range-text');
@@ -3010,6 +3297,7 @@ def create_dashboard(json_filepath, html_filepath):
             renderSummaryCards(filteredEntries);
             renderRunsChartForEntries(filteredEntries);
             updateRunsChartHighlightRange(start, end);
+            updateRunInteractionUI();
         }}
 
         function setupRunsTablePagination() {{
@@ -3391,23 +3679,35 @@ def create_dashboard(json_filepath, html_filepath):
             if (resetPagination) {{
                 runsTableState.page = 1;
             }}
+            const previewRun = getPreviewRun();
+            if (!previewRun) {{
+                dashboardState.previewRunIdx = -1;
+            }}
             updateTimePresetButtons();
             setupCompareMenu();
             renderRunsTablePage();
 
             const activeRun = RUNS_DATA[dashboardState.selectedRunIdx];
             if (document.getElementById('view-detail') && !document.getElementById('view-detail').classList.contains('hidden')) {{
-                if (!activeRun || !isRunVisible(activeRun)) {{
+                if (!activeRun || !isRunVisible(activeRun, dashboardState.selectedRunIdx)) {{
                     showRuns();
                 }}
             }}
             if (document.getElementById('view-compare') && !document.getElementById('view-compare').classList.contains('hidden')) {{
                 const leftRun = RUNS_DATA[compareState.leftIdx];
                 const rightRun = RUNS_DATA[compareState.rightIdx];
-                if (!leftRun || !rightRun || !isRunVisible(leftRun) || !isRunVisible(rightRun)) {{
+                if (!leftRun || !rightRun || !isRunVisible(leftRun, compareState.leftIdx) || !isRunVisible(rightRun, compareState.rightIdx)) {{
                     showRuns();
                 }}
             }}
+        }}
+
+        function previewRunRow(event, idx) {{
+            if (event) event.preventDefault();
+            const run = RUNS_DATA[idx];
+            if (!run || !isRunVisible(run, idx)) return;
+            dashboardState.previewRunIdx = dashboardState.previewRunIdx === idx ? -1 : idx;
+            renderRunsTablePage();
         }}
 
         function setupTimeFilterControls() {{
@@ -3576,7 +3876,7 @@ def create_dashboard(json_filepath, html_filepath):
 
         function showDetail(idx) {{
             const run = RUNS_DATA[idx];
-            if (!run || !isRunVisible(run)) return;
+            if (!run || !isRunVisible(run, idx)) return;
             dashboardState.selectedRunIdx = idx;
             document.getElementById('view-runs').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
