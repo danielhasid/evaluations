@@ -46,6 +46,7 @@ LLM_judge/
 |   |-- config.py                 RunConfig dataclass + metric key lists
 |   |-- env.py                    .env loading + API key validation
 |   |-- answering.py              GPT-4 answer generation (OpenAI client)
+|   |-- dataset_answering.py      Answer generation loop for dataset rows (ChromaRAG-ready)
 |   |-- pipeline.py               Main orchestrator: connects all steps
 |   |-- results.py                Save/update/display JSON results
 |   `-- logging_utils.py          log_stage() used across all modules
@@ -56,10 +57,18 @@ LLM_judge/
 |   `-- rag_adapter.py            RAG metric definitions + CSV loader
 |
 |-- apps/
-|   `-- evaluation_center_app.py  EvaluationCenterFacade - wires everything together
+|   |-- evaluation_center_app.py  EvaluationCenterFacade - wires everything together
+|   `-- dataset_server.py         Flask server: dashboard UI + REST API for dataset management
+|
+|-- scripts/
+|   |-- llm_as_a_judge_demo.py    Standalone demo: translate → summarize → GEval score
+|   `-- rag_deep_eval_demo.py     Standalone demo: manually run RAG metrics on a test case
+|
+|-- tests/
+|   `-- test_pipeline_smoke.py    Smoke tests for GEval and RAG pipelines (no real LLM calls)
 |
 |-- analyze_eval.py               GPT-4o report generation from results JSON
-|-- generate_dashboard.py         (Optional) HTML dashboard from results JSONs
+|-- generate_dashboard.py         HTML dashboard generated from all results JSONs
 |
 |-- datasets/
 |   |-- llm/LLM_goldenset.csv     Default GEval dataset
@@ -69,6 +78,7 @@ LLM_judge/
 `-- results/                      All output files land here (auto-created)
     |-- GEval_evaluation_results_TIMESTAMP.json
     |-- RAG_evaluation_results_TIMESTAMP.json
+    |-- Evaluation_dashbord.html
     `-- ...
 ```
 
@@ -269,6 +279,90 @@ The report text is saved back into the same results JSON under `"analysis_summar
 
 ---
 
+### `core/dataset_answering.py` - Dataset Answer Generation Loop
+
+`generate_answers_for_dataset(qa_pairs, answer_generator)` iterates over all rows in the
+loaded dataset and calls the provided `answer_generator.generate(messages)` for each question.
+It logs progress as `[i/n]` and writes the result back into each `qa_pair["generated_answer"]`.
+
+It also contains commented-out code for activating **ChromaRAG** answer generation — swap to
+`ChromaRAGAnswerGenerator` and uncomment the block to automatically fill `retrieval_context`
+from the Chroma retriever alongside the generated answer.
+
+---
+
+### `apps/dataset_server.py` - Flask Dataset Server
+
+A Flask web server that exposes a browser UI and REST API for managing datasets and triggering
+evaluation runs without touching the command line.
+
+Run it with:
+```powershell
+python apps/dataset_server.py
+```
+Then open [http://localhost:5000](http://localhost:5000).
+
+**REST endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Serves the evaluation dashboard HTML |
+| `GET` | `/browse?path=<dir>` | Lists folders and CSV files under the project root |
+| `GET` | `/datasets/load?path=<csv>` | Returns `{columns, rows}` for a CSV file |
+| `POST` | `/datasets/save` | Writes updated rows back to a CSV file |
+| `DELETE` | `/datasets/row` | Deletes a single row by zero-based index |
+| `GET` | `/metrics` | Returns valid metric keys for `llm` and `rag` modes |
+| `POST` | `/run` | Starts a GEval or RAG evaluation in a background thread |
+| `GET` | `/run/status` | Polls the running evaluation for log output and status |
+| `POST` | `/run/stop` | Requests cancellation of the running evaluation |
+
+File browsing is sandboxed to the `LLM_judge/` directory (path traversal is blocked).
+
+---
+
+### `scripts/llm_as_a_judge_demo.py` - LLM-as-a-Judge Demo
+
+A self-contained script demonstrating the LLM-as-a-judge pattern:
+
+1. Loads source text from `input_text.txt` and a reference summary from `reference_summary.txt`
+2. Uses GPT-4 to summarize the source text into a target language (Romanian by default)
+3. Back-translates the summary into English
+4. Scores the back-translation with three GEval metrics: **Fluency**, **Coherence**, **Relevance**
+
+Useful as a quick standalone proof-of-concept, independent of the main pipeline.
+
+---
+
+### `scripts/rag_deep_eval_demo.py` - RAG DeepEval Demo
+
+A minimal script for manually testing individual RAG metrics (`AnswerRelevancyMetric`,
+`FaithfulnessMetric`) on a single hardcoded test case. Useful for:
+
+- Verifying DeepEval is installed and the API key works
+- Experimenting with a single Q&A pair before building a full dataset
+
+---
+
+### `tests/test_pipeline_smoke.py` - Smoke Tests
+
+Pytest tests that exercise the full pipeline without making any real OpenAI or DeepEval API
+calls. Uses `DummyAdapter` (returns a single hardcoded Q&A pair) and `FakeAnswerGenerator`
+(returns a fixed string) to verify the pipeline wiring end-to-end.
+
+Two tests are included:
+
+| Test | Evaluator | Metric |
+|------|-----------|--------|
+| `test_geval_smoke_pipeline` | GEval | `fluency` |
+| `test_rag_smoke_pipeline` | RAG | `answer_relevancy` |
+
+Run with:
+```powershell
+pytest tests/test_pipeline_smoke.py
+```
+
+---
+
 ## Quick Start
 
 ### 1. Prerequisites
@@ -348,6 +442,7 @@ To add a new evaluation mode:
 1. Create `evaluators/my_adapter.py` implementing `load_golden_set_csv()` and `run_batch_evaluation()`
 2. Add the metric keys to `core/config.py`
 3. Add a `run_my_evaluation()` method in `apps/evaluation_center_app.py` and `evaluation_center.py`
+4. Expose it in `apps/dataset_server.py` by adding the new type to the `/run` endpoint's `eval_type` check
 
 The pipeline in `core/pipeline.py` requires no changes.
 
@@ -359,3 +454,6 @@ The pipeline in `core/pipeline.py` requires no changes.
 - Break on `evaluators/geval_adapter.py:run_batch_evaluation` to inspect metric objects before DeepEval runs
 - The JSON in `results/` after step 3 (before metric scoring) shows exactly what was sent to the evaluator
 - Set `metrics=["correctness"]` to run a single metric for faster debug cycles
+- Use `scripts/rag_deep_eval_demo.py` to test a single RAG metric in isolation before running the full pipeline
+- Run `pytest tests/test_pipeline_smoke.py` to verify pipeline wiring after any structural change (no API calls required)
+- For the Flask server, check the terminal output for per-request logs; the `/run/status` endpoint streams the same `log_stage` output that appears in the console
