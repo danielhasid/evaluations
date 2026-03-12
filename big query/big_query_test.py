@@ -9,14 +9,17 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\work\PythonProject\big query
 client = bigquery.Client(project='daniel-489817')
 
 # Submit the SQL query and get back a QueryJob object
-QUERY = "SELECT * FROM `daniel-489817`.`Daniel_test`.`daniel` LIMIT 1"
+QUERY = "SELECT * FROM `daniel-489817`.`Daniel_test`.`workers` LIMIT 2"
 query_job = client.query(QUERY)
 
-# Wait for the query to finish and retrieve the results
-results = query_job.result()
+# Wait for the query to finish and convert results to a DataFrame once (REST endpoint, no Storage API needed)
+df = query_job.result().to_dataframe(create_bqstorage_client=False)
 
-# Convert results to a DataFrame, serialize to JSON string, then parse into a Python list
-json_results = json.loads(results.to_dataframe().to_json(orient="records", indent=2))
+# Save results to a JSON file
+df.to_json("worker_output.json", orient="records", indent=2)
 
-# Print the value of 'string_field_3' from the first row
-print(json_results[0].get('string_field_3'))
+# Parse the DataFrame into a Python list of dicts
+json_results = json.loads(df.to_json(orient="records", indent=2))
+
+# Print the value of 'first_name' from the first row
+print(json_results[0].get('first_name'))
