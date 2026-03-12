@@ -1,25 +1,24 @@
-import os                              # Used to set environment variables
-import json                            # Used to parse and pretty-print JSON
-from google.cloud import bigquery      # BigQuery client library
+import os                                # Standard library for interacting with the operating system
+import json                              # Standard library for parsing and formatting JSON data
+from google.cloud import bigquery        # Google Cloud BigQuery client library
 
-# Authenticate using a service account key file
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\work\PythonProject\big query\daniel-489817-b2bf1671163c.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\work\PythonProject\big query\daniel-489817-b2bf1671163c.json"  # Set the path to the service account key file for authentication
 
-# Create a BigQuery client tied to the specified GCP project
-client = bigquery.Client(project='daniel-489817')
+client = bigquery.Client(project='daniel-489817')  # Create a BigQuery client tied to the specified GCP project
 
-# Submit the SQL query and get back a QueryJob object
-QUERY = "SELECT * FROM `daniel-489817`.`Daniel_test`.`workers` LIMIT 2"
-query_job = client.query(QUERY)
+QUERY = """SELECT TO_JSON_STRING(t) AS json_result   -- Convert each row to a JSON string, aliased as json_result
+FROM `daniel-489817`.`Daniel_test`.`workers` t       -- Query the workers table, aliased as t
+LIMIT 2"""
 
-# Wait for the query to finish and convert results to a DataFrame once (REST endpoint, no Storage API needed)
-df = query_job.result().to_dataframe(create_bqstorage_client=False)
+query_job = client.query(QUERY)          # Submit the SQL query and return a QueryJob object
+rows = query_job.result()                # Wait for the query to complete and return a RowIterator
 
-# Save results to a JSON file
-df.to_json("worker_output.json", orient="records", indent=2)
+json_result = [json.loads(row["json_result"]) for row in rows]  # Iterate over rows, parse each JSON string into a Python dict
 
-# Parse the DataFrame into a Python list of dicts
-json_results = json.loads(df.to_json(orient="records", indent=2))
+OUTPUT_FILE = r"C:\work\PythonProject\big query\output.json"  # Define the output file path for saving results
 
-# Print the value of 'first_name' from the first row
-print(json_results[0].get('first_name'))
+with open(OUTPUT_FILE, "w") as f:        # Open the file in write mode (creates it if it doesn't exist)
+    json.dump(json_result, f, indent=2)  # Write the list of dicts to the file as formatted JSON
+    print(f"Results saved to {OUTPUT_FILE}")  # Confirm the file was saved successfully
+
+print(json.dumps(json_result, indent=2)) # Also print the formatted JSON to the console

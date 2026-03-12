@@ -1,9 +1,26 @@
 [
   {
-    "string_field_0":"[\"824ec3772f45e0df2d839387a5f9318ad3eed408d086bdbdac168f8247468faf\",\"b9cb22d8b5521b47a9b668e94ce43946e087c948362a79b7ba3b9f358c73a35b\",\"8df31bd91433614240bb262eb8cdf295ed53e9dba84d0539cfdc8cdc01b50833\"]",
-    "string_field_1":"Summarize the nationality of players drafted by the 1970-71 Buffalo Braves, 1984-85 Philadelphia 76ers, and 1985-86 Boston Celtics. How does the representation of players from the United States compare to those from other countries?",
-    "string_field_2":"The players drafted by the 1970-71 Buffalo Braves, 1984-85 Philadelphia 76ers, and 1985-86 Boston Celtics were all from the United States, with no representation from other countries in the available data. Specifically, the Buffalo Braves drafted players such as John Hummer and Cornell Warner, while the Philadelphia 76ers selected notable players like Charles Barkley and Leon Wood, and the Boston Celtics drafted players including Sam Vincent and Andre Battle. This indicates a complete dominance of American players in the drafts of these three teams during the specified seasons, highlighting a lack of international representation in their selections.",
-    "string_field_3":"Analysis & Summary",
-    "string_field_4":"[\"1970-71 Buffalo Braves season - NBA Draft - NBA Draft\", \"1984-85 Philadelphia 76ers season - NBA Draft - NBA Draft\", \"1985-86 Boston Celtics season - NBA Draft - NBA Draft\"]"
+    "id": 5,
+    "first_name": "David",
+    "last_name": "Jones",
+    "email": "david.jones@company.com",
+    "phone": "+1-555-0105",
+    "position": "Data Analyst",
+    "department": "Analytics",
+    "salary": 68000,
+    "hire_date": "2022-09-14",
+    "status": "Active"
+  },
+  {
+    "id": 4,
+    "first_name": "Emily",
+    "last_name": "Brown",
+    "email": "emily.brown@company.com",
+    "phone": "+1-555-0104",
+    "position": "UX Designer",
+    "department": "Design",
+    "salary": 72000,
+    "hire_date": "2023-01-08",
+    "status": "Active"
   }
 ]
