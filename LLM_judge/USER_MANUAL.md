@@ -26,7 +26,7 @@ pip install -r RAG_TEST/requirements.txt
 
 ### 2. Set your OpenAI API key
 
-Create a `.env` file in the `RAG_TEST/Tests/LLM_judge/` directory:
+Create a `.env` file in the `LLM_judge/` directory:
 
 ```
 OPENAI_API_KEY=sk-...your-key-here...
@@ -36,7 +36,7 @@ OPENAI_API_KEY=sk-...your-key-here...
 
 ## Input File: `golden_set.csv`
 
-Place your dataset CSV in the same directory as the scripts (`RAG_TEST/Tests/LLM_judge/`).
+Place your dataset CSV in the same directory as the scripts (`LLM_judge/`).
 
 ### GEval mode — required columns
 
@@ -68,10 +68,10 @@ question,expected_answer,retrieval_context,context,metadata
 
 ## Running the Evaluation
 
-All scripts must be run from the `RAG_TEST/Tests/LLM_judge/` directory.
+All scripts must be run from the `LLM_judge/` directory.
 
 ```bash
-cd RAG_TEST/Tests/LLM_judge
+cd LLM_judge
 ```
 
 ### Option A — Run via `EvaluationCenter` (recommended)
@@ -225,7 +225,7 @@ save_summary_to_json()           → evaluation_results.json (analysis_summary a
 | Problem | Cause | Fix |
 |---|---|---|
 | `OPENAI_API_KEY not set` | Missing `.env` file or env var | Create `.env` with your key in the script directory |
-| `CSV file not found` | Wrong path or filename | Confirm `golden_set.csv` is in `RAG_TEST/Tests/LLM_judge/` |
+| `CSV file not found` | Wrong path or filename | Confirm `golden_set.csv` is in `LLM_judge/` |
 | `CSV must contain columns: ...` | Missing required column | Add the missing column to your CSV (see Input File section) |
 | `KeyError: 'results'` | Old flat-list JSON format | Delete the old `evaluation_results.json` and re-run |
 | DeepEval metric errors | API quota or model unavailability | Check OpenAI account quota; retry after a short wait |

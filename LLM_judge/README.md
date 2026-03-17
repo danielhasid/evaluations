@@ -397,28 +397,68 @@ question,expected_answer,retrieval_context,context,metadata
 
 ### 3. Run
 
+**Option A — Direct execution (recommended)**
+
+Run `evaluation_center.py` directly from the `LLM_judge/` directory:
+
 ```powershell
-cd C:\work\PythonProject\RAG_TEST\Tests\LLM_judge
-
-# GEval - all 4 default metrics
+cd c:\Eval\evaluations\LLM_judge
 python evaluation_center.py
+```
 
-# Or from Python code:
+To change which metrics or dataset are used, edit the `__main__` block at the bottom of `evaluation_center.py`:
+
+```python
+if __name__ == "__main__":
+    center = EvaluationCenter()
+
+    # GEval - pick any combination of: fluency, relevance, correctness, hallucination
+    center.run_geval_evaluation(
+        input_csv="datasets/llm/LLM_goldenset.csv",
+        output_dir="results",
+        metrics=["fluency", "relevance", "correctness", "hallucination"],
+    )
+
+    # RAG - pick any combination of: answer_relevancy, faithfulness,
+    #        contextual_precision, contextual_recall, contextual_relevancy
+    # center.run_rag_evaluation(
+    #     input_csv="datasets/rag/RAG_goldenset.csv",
+    #     output_dir="results",
+    #     metrics=["answer_relevancy", "faithfulness"],
+    # )
+```
+
+**Option B — From Python code**
+
+Import and call programmatically from any script:
+
+```python
 from evaluation_center import EvaluationCenter
 
-# GEval - specific metrics
 center = EvaluationCenter()
+
+# GEval
 center.run_geval_evaluation(
     input_csv="datasets/llm/LLM_goldenset.csv",
     metrics=["correctness", "hallucination"]
 )
 
-# RAG - must specify metrics explicitly
+# RAG
 center.run_rag_evaluation(
     input_csv="datasets/rag/RAG_goldenset.csv",
     metrics=["answer_relevancy", "faithfulness"]
 )
 ```
+
+**Option C — Flask UI**
+
+Start the web server to manage datasets and trigger runs from a browser:
+
+```powershell
+python apps/dataset_server.py
+```
+
+Then open [http://localhost:5000](http://localhost:5000).
 
 ### 4. Output
 
