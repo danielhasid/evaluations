@@ -1,7 +1,6 @@
 ---
 name: api-testing
 description: HTTP API testing for external or local REST APIs using Python (requests, pytest). Automatically scaffolds a tests/ directory with test files, conftest.py, requirements, and runs the suite. Trigger when user says "test API", "run api tests", "test this endpoint", or provides a base URL to test.
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob, TodoWrite
 ---
 
 # API Testing Skill
