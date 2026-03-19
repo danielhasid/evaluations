@@ -128,6 +128,16 @@ List recommendations in priority order (biggest impact first). For each:
 
 ---
 
+## Step 6 — Close the page
+
+After delivering the report, close the audited page:
+```
+mcp__chrome-devtools__list_pages()  // get the pageId
+mcp__chrome-devtools__close_page(pageId=<id>)
+```
+
+---
+
 ## Tips
 
 - If field data (CrUX) is available, lead with it — it reflects real users, not just this machine.
