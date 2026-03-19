@@ -57,7 +57,16 @@ that probably should be — missing edge cases, untested error paths, or risky f
 scenario written for them.
 
 ### 6. Offer to generate tests
-At the very end of your response, always add this line (exactly):
+At the very end of your response, determine whether the file is focused on **API testing or backend/HTTP interactions** (e.g. it contains HTTP methods, endpoints, status codes, request/response handling, or API client code). Then add exactly one of the following closing lines:
+
+- **If the file is API-related:**
+
+---
+**Would you like me to generate these test cases as Python + requests code?**
+
+---
+
+- **Otherwise (UI, browser-based, or general):**
 
 ---
 **Would you like me to generate these test cases as Python + Playwright code?**
